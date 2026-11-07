@@ -1,3 +1,7 @@
+## 7 November 20:12 UTC: public 0.1.37 update verified
+
+Published v0.1.37.0 from sourcec725b48. Real hosted delivery and the shipped0.1.36 updater applied0.1.37 to an owned app clone with exit0. All298installed file hashes matched; an unrelated read-only user file was preserved, and the signed public latest feed reported no newer release. The stable download URL resolves to the433,322,668byte package, SHA256D15040687EFC595A50CC088454825BCD685120600D45FD62D3C40ED7BA79D10B. Evidence: package2899-proof.json, hosted2900-proof.json, hosted2900-apply.log, hosted2900-latest.json and stable2901-proof.json. These are app delivery checks, not a new Windows/Shiftd installation pass. No VM, physical drive or original ISO was changed.
+
 ## 7 November: mandatory Shiftd in 0.1.37
 
 The real BuildEngine always adds canonical HatchZip and Shiftd IDs before payload preparation, provisioning and post-app manifests, independently of optional selections. Both ISO export and customised USB creation use this build path. Fixed inclusions are filtered from optional browsing/search and ignored by toggle handlers. Boot Optimizer now waits for Shiftd as well. Mixed-case/duplicate old selections become one canonical Shiftd entry.
