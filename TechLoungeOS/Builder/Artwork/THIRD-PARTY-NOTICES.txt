@@ -1,0 +1,55 @@
+THIRD-PARTY NOTICES
+===================
+
+Builder includes small offline identification logos for the seven recommended apps.
+Discord, Brave, Google Chrome, Steam and MSI Afterburner logos come from the
+hash-pinned package-icons catalog already used by this project (revision
+5ce78130bf1d802ce3460c376a5fc76a7379e362; see catalog.json for original hashes).
+Stremio's favicon is from https://www.stremio.com/website/favicon.ico, converted
+losslessly to PNG. ChatGPT's logo is the official OpenAI product logo supplied by
+Microsoft Store product 9PLM9XGG6VKS (publisher OpenAI), retrieved 28 October 2026.
+These assets identify their respective applications and imply no endorsement.
+
+This repository redistributes software icons and logos that are the property of their
+respective owners.
+
+All product names, logos, trademarks, and brands are the property of their respective owners.
+All company, product, and service names used in this repository are for identification purposes
+only. Use of these names, logos, and brands does not imply any affiliation with, sponsorship by,
+or endorsement by their respective owners.
+
+The icons are included solely to visually identify the corresponding software within the projects
+that consume this repository (e.g. Winhance — https://github.com/memstechtips/Winhance — and the
+Winhance website — https://winhance.net). This constitutes nominative fair use: no more of each
+mark is used than necessary to identify the product, and no endorsement is implied.
+
+Microsoft's Windows component icons (built-in Store apps, capabilities, and optional features)
+are intentionally not redistributed in this repository; they are resolved locally or from
+Microsoft-served sources. Microsoft's downloadable applications distributed via package managers
+(e.g. Visual Studio Code, PowerShell, PowerToys, Microsoft 365) are included on the same
+nominative-fair-use basis as every other third-party application.
+
+Per-icon identity (package-manager IDs, AppX identity, sha256) is recorded in `manifest.json`.
+
+ICONS8
+------
+
+The ExplorerPatcher icon (`icons/external/valinet.explorerpatcher.png`) is the "Windows
+Explorer" icon from the Icons8 Fluent set, used under Icons8's free license, which permits
+use with a link-back attribution:
+
+    Icon by Icons8 — https://icons8.com
+
+REMOVAL REQUESTS
+----------------
+
+If you are an individual or company that owns rights to a logo or icon in this repository and you
+would like it removed, please open an issue:
+
+    https://github.com/memstechtips/package-icons/issues
+
+The icon will be removed promptly on request.
+
+Proton VPN icon: https://raw.githubusercontent.com/ProtonVPN/win-app/master/Setup/Images/protonvpn.ico (retrieved 29 October 2026); source SHA256 73e632fdb7cd7cfaf5bd6e388f891b573700c5ba93e7813ac70c959267779ee2, converted to lossless PNG for application identification.
+
+HWiNFO64 icon: extracted without execution from publisher-signed HWiNFO64.exe in the official download page's SAC mirror archive https://www.sac.sk/download/utildiag/hwi_854.zip (29 October 2026). Archive SHA256 657379140CEA34AD504D5FC8815E6F5E71ECE2C8D06DDB0CCB118C8AFE43CA95; executable SHA256 E4CE0C85C4288FA7E8EB12EBEECE99EFFF4D81E0B13DE53F091DAABC81A3C9D3; PNG SHA256 5DA74888377F18AEFAC233B97790F1D11505F6B91E988F2A13D71D72055A9F5B. REALiX, s.r.o. branding used for application identification. App licensing: https://www.hwinfo.com/licenses/ .

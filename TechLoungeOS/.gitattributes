@@ -1,0 +1,6 @@
+# Preserve these supplied, checksum-pinned files byte-for-byte in normal checkouts.
+# For a full exported diff applied outside a repository, use:
+# git -c core.autocrlf=false apply <review.diff>
+# Git cannot consult repository attributes before that repository exists.
+Builder/OptimizeBootSource.ps1 -text
+Builder/Deployment/TechLoungeOS-Standalone.cmd -text

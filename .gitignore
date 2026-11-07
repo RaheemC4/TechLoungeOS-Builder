@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/artifacts/
+private/
+.vs/
+**/__pycache__/
+**/node_modules/
+brag-output*/
+/ACTIVE-*.md
+/PAUSED-*.md
+/PAUSE-STATE.md
+
+# Preserve owner-supplied activation artifacts locally; exclude them from releases/source publication.
+/TechLoungeOS/Builder/Deployment/TechLoungeOS-Standalone.cmd
+/TechLoungeOS/Builder/StandaloneWorker.ps1

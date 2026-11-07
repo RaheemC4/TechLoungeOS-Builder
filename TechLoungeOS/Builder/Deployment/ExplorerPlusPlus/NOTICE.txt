@@ -1,0 +1,10 @@
+Explorer++ 1.4.0 (x64), unmodified, by David Erceg and contributors.
+GPL-3.0-only. See LICENSE.txt and the matching source.zip beside this file.
+Source commit: 384c2f687fd55c1e71e9fcb272f9113de009a248
+Release: https://github.com/derceg/explorerplusplus/releases/tag/version-1.4.0
+Binary: https://github.com/derceg/explorerplusplus/releases/download/version-1.4.0/explorerpp_x64.zip
+Source: https://github.com/derceg/explorerplusplus/tree/384c2f687fd55c1e71e9fcb272f9113de009a248
+This independent file manager is included only for standard Windows PE images.
+Existing custom-image file managers and tools are retained unchanged.
+The upstream executable has no Authenticode signature. No antivirus exclusions
+or security-policy changes are made to launch it. Its interface is upstream-owned.

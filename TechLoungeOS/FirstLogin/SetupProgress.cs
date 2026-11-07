@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Text;
+using System.IO;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Threading;
+using System.Web.Script.Serialization;
+using System.Windows.Forms;
+
+namespace TechLoungeOS.FirstLogin
+{
+    // A finite first-start surface. Closing it never terminates an installer.
+    internal sealed class SetupProgress : Form
+    {
+        private readonly string state;
+        private readonly Func<int> work;
+        private readonly Label heading, step, detail,brand,subtitle;
+        private readonly Button retry;
+        private readonly ProgressTrack track;
+        private readonly System.Windows.Forms.Timer timer;
+        private readonly NotifyIcon tray;
+        private readonly PrivateFontCollection fonts = new PrivateFontCollection();
+        private readonly List<IntPtr> fontMemory = new List<IntPtr>();
+        private readonly List<IntPtr> fontHandles = new List<IntPtr>();
+        private Thread worker;
+        private volatile bool running;
+        private int result = 1;
+        private DateTime completed;
+        private bool resourcesReleased;
+        private readonly List<Font> ownedFonts = new List<Font>();
+
+        [DllImport("gdi32.dll")] private static extern IntPtr AddFontMemResourceEx(IntPtr data,uint length,IntPtr reserved,ref uint count);
+        [DllImport("gdi32.dll")] private static extern bool RemoveFontMemResourceEx(IntPtr handle);
+        [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr window,int attribute,ref int value,int size);
+        [DllImport("user32.dll")] private static extern bool SystemParametersInfo(uint action,uint parameter,out bool value,uint flags);
+
+        internal static bool Motion { get { bool allowed; return !SystemInformation.HighContrast && SystemParametersInfo(0x1042,0,out allowed,0) && allowed; } }
+        internal SetupProgress(string state,Func<int> work,bool startOnShown=true)
+        {
+            this.state=state;this.work=work;
+            Text="TechLoungeOS setup";ShowInTaskbar=true;StartPosition=FormStartPosition.CenterScreen;
+            ClientSize=new Size(620,390);MinimumSize=new Size(460,350);AutoScaleDimensions=new SizeF(96,96);AutoScaleMode=AutoScaleMode.Dpi;
+            FormBorderStyle=SystemInformation.HighContrast?FormBorderStyle.FixedSingle:FormBorderStyle.None;
+            DoubleBuffered=true;
+            MaximizeBox=false;ShowIcon=true;Icon=Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
+            BackColor=SystemInformation.HighContrast?SystemColors.Window:Color.FromArgb(20,23,29);
+            ForeColor=SystemInformation.HighContrast?SystemColors.WindowText:Color.FromArgb(236,240,246);
+            LoadFont("TechLoungeOS.SoraRegular.ttf");LoadFont("TechLoungeOS.SoraSemibold.ttf");
+            Font=Face("Sora",10.5f);
+            var layout=new TableLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(28,14,28,22),ColumnCount=1,RowCount=7,AutoScroll=true};
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute,38));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            foreach(float height in new[]{112f,18f,14f})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
+            var caption=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};
+            caption.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));caption.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,34));
+            brand=new Label {Text="TechLoungeOS",Font=Face("Sora SemiBold",9),Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,ForeColor=Subtle};
+            brand.MouseDown+=delegate(object sender,MouseEventArgs e){if(e.Button==MouseButtons.Left){ReleaseCapture();SendMessage(Handle,0xA1,(IntPtr)2,IntPtr.Zero);}};
+            var dismiss=new SmoothButton {Text="×",AccessibleName="Hide setup",Width=32,Height=30,Quiet=true,Margin=Padding.Empty};dismiss.Click+=delegate{if(running)Hide();else Close();};
+            caption.Controls.Add(brand,0,0);caption.Controls.Add(dismiss,1,0);
+            var titles=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,AutoSize=true,AutoSizeMode=AutoSizeMode.GrowAndShrink,Margin=new Padding(0,0,0,12)};
+            titles.RowStyles.Add(new RowStyle(SizeType.AutoSize));titles.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            heading=new AnimatedLabel {Text="Finishing your setup",Dock=DockStyle.Fill,Font=Face("Sora SemiBold",21),AutoSize=true,AutoEllipsis=true,Margin=Padding.Empty};
+            subtitle=new Label {Text="Your desktop is ready to use.",Dock=DockStyle.Fill,AutoSize=true,ForeColor=Subtle,Margin=new Padding(0,3,0,0)};
+            titles.Controls.Add(heading,0,0);titles.Controls.Add(subtitle,0,1);
+            var status=new RoundedStatusPanel {Dock=DockStyle.Fill,Padding=new Padding(18),Margin=Padding.Empty};
+            var statusLayout=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,BackColor=status.BackColor};
+            statusLayout.RowStyles.Add(new RowStyle(SizeType.Absolute,30));statusLayout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+            step=new AnimatedLabel {Text="Preparing your selected apps",Dock=DockStyle.Fill,Font=Face("Sora SemiBold",11),AutoEllipsis=true,Margin=Padding.Empty};
+            detail=new AnimatedLabel {Text="Successful installs are saved as we go.",Dock=DockStyle.Fill,ForeColor=Subtle,AutoEllipsis=true,Margin=new Padding(0,5,0,0)};
+            statusLayout.Controls.Add(step,0,0);statusLayout.Controls.Add(detail,0,1);status.Controls.Add(statusLayout);
+            track=new ProgressTrack {Dock=DockStyle.Fill,Margin=Padding.Empty};
+            var actions=new FlowLayoutPanel {Dock=DockStyle.Fill,FlowDirection=FlowDirection.RightToLeft,WrapContents=true,Padding=new Padding(0,4,0,0),Margin=Padding.Empty};
+            var hide=new SmoothButton {Text="Hide",Width=94,Primary=true};hide.Click+=delegate {if(running)Hide();else Close();};
+            retry=new SmoothButton {Text="Retry setup",Width=125,Enabled=false,Visible=false,Primary=true};retry.Click+=delegate {StartWork();};
+            var logs=new SmoothButton {Text="View logs",Width=110};logs.Click+=delegate {try {Process.Start(new ProcessStartInfo("explorer.exe",Launcher.Quote(state)){UseShellExecute=true});}catch(Exception e){detail.Text=e.Message;}};
+            actions.Controls.Add(hide);actions.Controls.Add(retry);actions.Controls.Add(logs);
+            layout.Controls.Add(caption,0,0);layout.Controls.Add(titles,0,1);layout.Controls.Add(status,0,2);layout.Controls.Add(track,0,4);layout.Controls.Add(actions,0,6);Controls.Add(layout);
+            tray=new NotifyIcon {Icon=Icon??SystemIcons.Application,Text="TechLoungeOS setup",Visible=false};
+            tray.DoubleClick+=delegate {Show();WindowState=FormWindowState.Normal;Activate();};
+            var menu=new ContextMenuStrip {Font=Face("Sora",9)};menu.Items.Add("Show setup progress",null,delegate {Show();WindowState=FormWindowState.Normal;Activate();});tray.ContextMenuStrip=menu;
+            timer=new System.Windows.Forms.Timer {Interval=500};timer.Tick+=delegate {RefreshProgress();};timer.Start();
+            Shown+=delegate {if(startOnShown){tray.Visible=true;StartWork();}};
+            FormClosing+=delegate(object sender,FormClosingEventArgs e){if(running && e.CloseReason==CloseReason.UserClosing){e.Cancel=true;Hide();}};
+        }
+
+        [DllImport("user32.dll")]private static extern bool ReleaseCapture();
+        [DllImport("user32.dll")]private static extern IntPtr SendMessage(IntPtr hwnd,uint message,IntPtr wparam,IntPtr lparam);
+        private static Color Subtle {get{return SystemInformation.HighContrast?SystemColors.WindowText:Color.FromArgb(165,178,197);}}
+        private Font Face(string name,float size){foreach(var family in fonts.Families)if(family.Name==name){var face=new Font(family,size,FontStyle.Regular);ownedFonts.Add(face);return face;}throw new IOException("The packaged Sora font did not load: "+name);}
+        protected override void OnSizeChanged(EventArgs e){base.OnSizeChanged(e);if(!SystemInformation.HighContrast&&Width>0&&Height>0){var old=Region;using(var path=SetupDrawing.Rounded(new RectangleF(0,0,Width,Height),18*DeviceDpi/96f))Region=new Region(path);if(old!=null)old.Dispose();}Invalidate();}
+        protected override void OnPaint(PaintEventArgs e){base.OnPaint(e);if(!SystemInformation.HighContrast){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=SetupDrawing.Rounded(new RectangleF(.5f,.5f,Width-1,Height-1),18*DeviceDpi/96f))using(var pen=new Pen(Color.FromArgb(53,61,74)))e.Graphics.DrawPath(pen,path);}}
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            int dark=SystemInformation.HighContrast?0:1;
+            try{DwmSetWindowAttribute(Handle,20,ref dark,4);}catch(DllNotFoundException){}
+        }
+        protected override bool ShowWithoutActivation {get{return true;}}
+        protected override void OnSystemColorsChanged(EventArgs e)
+        {
+            base.OnSystemColorsChanged(e);
+            BackColor=SystemInformation.HighContrast?SystemColors.Window:Color.FromArgb(20,23,29);
+            ForeColor=SystemInformation.HighContrast?SystemColors.WindowText:Color.FromArgb(236,240,246);
+            foreach(var label in new[]{brand,subtitle,detail})if(label!=null)label.ForeColor=Subtle;
+            FormBorderStyle=SystemInformation.HighContrast?FormBorderStyle.FixedSingle:FormBorderStyle.None;
+            if(SystemInformation.HighContrast){var previous=Region;Region=null;if(previous!=null)previous.Dispose();}else OnSizeChanged(EventArgs.Empty);
+            Invalidate(true);
+        }
+
+        private void LoadFont(string name)
+        {
+            using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream(name))
+            {
+                if(stream==null)throw new IOException("The setup font was not packaged.");
+                var bytes=new byte[checked((int)stream.Length)];int read=0;
+                while(read<bytes.Length){int count=stream.Read(bytes,read,bytes.Length-read);if(count==0)throw new EndOfStreamException();read+=count;}
+                var memory=Marshal.AllocHGlobal(bytes.Length);fontMemory.Add(memory);Marshal.Copy(bytes,0,memory,bytes.Length);
+                fonts.AddMemoryFont(memory,bytes.Length);uint faces=0;var handle=AddFontMemResourceEx(memory,(uint)bytes.Length,IntPtr.Zero,ref faces);
+                if(handle==IntPtr.Zero || faces==0)throw new IOException("The setup font could not be loaded.");fontHandles.Add(handle);
+            }
+        }
+
+        private void StartWork()
+        {
+            if(running)return;
+            running=true;retry.Enabled=false;retry.Visible=false;completed=DateTime.MinValue;heading.Text="Finishing your setup";track.State=SetupProgressState.Working;
+            worker=new Thread(new ThreadStart(delegate {
+                int code;
+                try{code=work();}catch(Exception error){code=1;try{File.WriteAllText(Path.Combine(state,"bootstrap-status.txt"),error.Message);}catch(IOException){}catch(UnauthorizedAccessException){}}
+                try{if(!IsDisposed)BeginInvoke(new Action(delegate {
+                    result=code;running=false;retry.Enabled=code!=0;retry.Visible=code!=0;track.State=code==0?SetupProgressState.Complete:SetupProgressState.Attention;
+                    heading.Text=code==0?"You’re ready":"Setup needs attention";
+                    step.Text=code==0?"Your selected apps and settings are ready.":"Successful installs are saved. Retry the remaining steps.";
+                    if(code==0)completed=DateTime.UtcNow;else {Show();WindowState=FormWindowState.Normal;RefreshProgress();}
+                }));}catch(InvalidOperationException){}
+            }));
+            worker.IsBackground=false;worker.Name="TechLoungeOS first-start installer observer";worker.Start();
+        }
+
+        internal static Dictionary<string,object> ReadProgress(string path)
+        {
+            using(var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete))
+            {
+                if(input.Length>65536)throw new IOException("Unexpected setup status size.");
+                using(var reader=new StreamReader(input)){var result=new JavaScriptSerializer().Deserialize<Dictionary<string,object>>(reader.ReadToEnd());if(result==null)throw new IOException("Empty setup progress.");return result;}
+            }
+        }
+
+        private void RefreshProgress()
+        {
+            track.State=running?SetupProgressState.Working:result==0?SetupProgressState.Complete:SetupProgressState.Attention;
+            try {
+                var status=ReadProgress(Path.Combine(state,"progress.json"));object value;
+                if(running && status.TryGetValue("step",out value))step.Text=Friendly(Convert.ToString(value));
+                if(status.TryGetValue("message",out value))detail.Text=Convert.ToString(value);
+                if(!running && result==0 && status.TryGetValue("phase",out value) && Convert.ToString(value)=="restart-needed"){
+                    heading.Text="Restart when convenient";step.Text="Your apps are installed. Windows needs a normal restart.";
+                }
+            }catch(IOException){}catch(UnauthorizedAccessException){}catch(ArgumentException){}catch(InvalidOperationException){}
+            if(completed!=DateTime.MinValue && (DateTime.UtcNow-completed).TotalSeconds>=8)Close();
+        }
+
+        private static string Friendly(string id)
+        {
+            switch(id){case "Office":case "office":return "Microsoft 365";case "Runtimes":return "App and gaming runtimes";case "StoreXbox":return "Microsoft Store and Xbox";case "Edge":return "Microsoft Edge";case "Recovery":return "Windows recovery";case "LegacyNetwork":return "Network compatibility";case "TechLounge.DiscordOpenAsar":return "Discord";case "Brave.Brave":return "Brave";case "Google.Chrome":return "Google Chrome";case "Valve.Steam":return "Steam";case "Guru3D.Afterburner":return "MSI Afterburner";case "Stremio.Stremio":return "Stremio";case "Proton.ProtonVPN":return "Proton VPN";case "TechLounge.ChatGPT":return "ChatGPT";case "TechLounge.HatchZip":return "HatchZip";case "REALiX.HWiNFO":case "HWiNFO":return "HWiNFO64";case "machine-setup":return "Preparing required installers";default:return string.IsNullOrEmpty(id)?"Finishing your setup":id.Replace('-',' ');}
+        }
+
+        internal static int Run(string state,Func<int> work)
+        {
+            Application.EnableVisualStyles();Application.SetCompatibleTextRenderingDefault(false);
+            using(var window=new SetupProgress(state,work)){Application.Run(window);return window.result;}
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if(disposing&&!resourcesReleased){
+                resourcesReleased=true;
+                if(timer!=null)timer.Dispose();if(tray!=null){tray.Visible=false;if(tray.ContextMenuStrip!=null)tray.ContextMenuStrip.Dispose();tray.Dispose();}
+                base.Dispose(true);
+                foreach(var face in ownedFonts)face.Dispose();ownedFonts.Clear();
+                fonts.Dispose();foreach(var handle in fontHandles)RemoveFontMemResourceEx(handle);fontHandles.Clear();
+                foreach(var memory in fontMemory)Marshal.FreeHGlobal(memory);fontMemory.Clear();
+            }
+            else base.Dispose(disposing);
+        }
+    }
+
+}

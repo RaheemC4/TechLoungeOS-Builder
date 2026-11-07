@@ -1,0 +1,22 @@
+{
+  "utc": "2026-11-04T21:26:01.3055969Z",
+  "revision": "7f9a9c5d0ccd1c099cfac420aa27133df1c5fdc4",
+  "files": [
+    {
+      "name": "OFL.txt",
+      "sha256": "BA0B9729C9428BA79A0459AB8EC575791B51509DBEC213E383D0316D37FEC299",
+      "bytes": 4385
+    },
+    {
+      "name": "Sora-Regular.ttf",
+      "sha256": "517E945DEDBEEB8D700CCAE77D189A6EF2A01F6DCC95BA5D032EF9A30F7F0DE9",
+      "bytes": 84640
+    },
+    {
+      "name": "Sora-SemiBold.ttf",
+      "sha256": "B02621D4009DA9A18EB8A5CBE277F084EB9C3F065BA08A6E77769E81863BECF2",
+      "bytes": 91276
+    }
+  ],
+  "source": "https://github.com/sora-xor/sora-font"
+}

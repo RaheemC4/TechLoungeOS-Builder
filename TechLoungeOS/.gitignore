@@ -1,0 +1,7 @@
+**/bin/
+**/obj/
+artifacts/
+*.iso
+*.wim
+*.esd
+*.swm

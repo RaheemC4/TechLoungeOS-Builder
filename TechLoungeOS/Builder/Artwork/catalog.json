@@ -1,0 +1,766 @@
+{
+  "7zip.7zip": {
+    "File": "external/7zip.7zip.png",
+    "Sha256": "7606362fe8c478e9c2daaef4f1f8596e1a4b3c4dbef3fa79fef35fdab80dfa96"
+  },
+  "Ablaze.Floorp": {
+    "File": "external/ablaze.floorp.png",
+    "Sha256": "2c16bc5d49c89f37ee19e5a81f5405f204160ed35bce317940961e98505bd6ba"
+  },
+  "AdrienAllard.FileConverter": {
+    "File": "external/adrienallard.fileconverter.png",
+    "Sha256": "657efb9f231babc4e72d6c11d0bf591fb263e034b787a88720b286cd1dfa8aa4"
+  },
+  "AIMP.AIMP": {
+    "File": "external/aimp.aimp.png",
+    "Sha256": "b686342aacdf22da1f5af82d96e25997270f65971e667871d3816127f7f13a4b"
+  },
+  "Alex313031.Mercury": {
+    "File": "external/alex313031.mercury.png",
+    "Sha256": "24d216fa8a06b200e264f7054526ff16943fe4ba9f2367c6b27e9d0b1bec6a01"
+  },
+  "Alex313031.Thorium": {
+    "File": "external/alex313031.thorium.png",
+    "Sha256": "043f6c28c145e02c4b1f0ee23037d9ce645fda8c47f95447afa040d51bd5f911"
+  },
+  "AntibodySoftware.WizTree": {
+    "File": "external/antibodysoftware.wiztree.png",
+    "Sha256": "f1f1bb0dd703f5ab54cfb7f3ef7f166a5b5c120ec7e13f551734ec56b9e5b4f4"
+  },
+  "AnyDesk.AnyDesk": {
+    "File": "external/anydesk.anydesk.png",
+    "Sha256": "eefa7cdc23680177ecf9ac007d4ddaacbc66ac5b86340f7ccf02fa65d5bbc260"
+  },
+  "Apache.OpenOffice": {
+    "File": "external/apache.openoffice.png",
+    "Sha256": "12460e590b44d00a0f17f2b549e317060307c39b4eac59b02f56c47fc01b2bf8"
+  },
+  "Apple.iTunes": {
+    "File": "external/apple.itunes.png",
+    "Sha256": "c55c2143d863abe723a2406fed57d2fa56c51492fabf178fa02476d35ae52177"
+  },
+  "Audacity.Audacity": {
+    "File": "external/audacity.audacity.png",
+    "Sha256": "cbbfd31147be36508eac8cfe777f23b628b63956314404200b930448041ce1f8"
+  },
+  "AutoHotkey.AutoHotkey": {
+    "File": "external/autohotkey.autohotkey.png",
+    "Sha256": "d06ea7c77bf4f4ff50d114704de0eaf9923be41fb928c98de3508ce52a3c6a98"
+  },
+  "BiniSoft.WindowsFirewallControl": {
+    "File": "external/binisoft.windowsfirewallcontrol.png",
+    "Sha256": "70b95ff8f60f779276c8f5059a8ec12b5757f8ee9ff177483fe50caa10a118d8"
+  },
+  "BlenderFoundation.Blender": {
+    "File": "external/blenderfoundation.blender.png",
+    "Sha256": "1659fbc6ea1b97e0a35c27e5cb1f30e943608e8f8036af6f1441b431307ca3a5"
+  },
+  "Blizzard.BattleNet": {
+    "File": "external/blizzard.battlenet.png",
+    "Sha256": "2fcbf1f81918bd4b64675fddaf7734671b28d0318268b32ca096d85448259e1a"
+  },
+  "Brave.Brave": {
+    "File": "external/brave.brave.png",
+    "Sha256": "052a5b9c4baa7e812c943b3bbb9fb279c860dc336aa8fc52ef66a7a53650a27e"
+  },
+  "ByteDance.CapCut": {
+    "File": "external/bytedance.capcut.png",
+    "Sha256": "65a71f43fa2f4ef4ec37ef6765decbe2f0b547b37404bbee21e11d5ab611337e"
+  },
+  "CeruleanStudios.Trillian": {
+    "File": "external/ceruleanstudios.trillian.png",
+    "Sha256": "3520e8398a9fef5a78eedf861e431e6e3fcb382f60d152d1a411e918db263b7f"
+  },
+  "ch.LosslessCut": {
+    "File": "external/ch.losslesscut.png",
+    "Sha256": "8035167a0943815bf32ca719e944d25ae896fd903b89dfd48453261cb4345332"
+  },
+  "clsid2.mpc-hc": {
+    "File": "external/clsid2.mpc-hc.png",
+    "Sha256": "215cfb97755b052756f2d4f9ddad5e907b8aea2d18282d902dba2ff7a58c8cea"
+  },
+  "CodecGuide.K-LiteCodecPack.Mega": {
+    "File": "external/codecguide.k-litecodecpack.mega.png",
+    "Sha256": "8f604c946240d709d677a67ee66937310c97c9a0ba4390f4e93a520916379710"
+  },
+  "CodeSector.TeraCopy": {
+    "File": "external/codesector.teracopy.png",
+    "Sha256": "b1cf9fee1589500a7fd43940f1222c82a8eb91471fd180238d76be1096cac739"
+  },
+  "CrystalDewWorld.CrystalDiskInfo": {
+    "File": "external/crystaldewworld.crystaldiskinfo.png",
+    "Sha256": "97ec6d5d0b19eae3d5985926ac475ab53d6be35b638552bd3ccd8aa73f347c08"
+  },
+  "Cyanfish.NAPS2": {
+    "File": "external/cyanfish.naps2.png",
+    "Sha256": "229a7d502f9140338565de08a50e35c8796726c2e4b724912483838e71bfb663"
+  },
+  "Daum.PotPlayer": {
+    "File": "external/daum.potplayer.png",
+    "Sha256": "dfb348ca5e7a990e9cf2cfe6caa628108427711c85efaaff4d88d4a245fa2292"
+  },
+  "Deskflow.Deskflow": {
+    "File": "external/deskflow.deskflow.png",
+    "Sha256": "8a044f27d141de33f7d2008d10863731be537122cafcfc755db2130a8f9115af"
+  },
+  "Devolutions.UniGetUI": {
+    "File": "external/devolutions.unigetui.png",
+    "Sha256": "a996266c0b6dc53a9ebdfb3f58bc402b3b0246fa21810fb508553d16a42e1006"
+  },
+  "Discord.Discord": {
+    "File": "external/discord.discord.png",
+    "Sha256": "40160b15802f2798447b80807108845507be88663128f9d1c7593139e2b05e15"
+  },
+  "dotPDN.PaintDotNet": {
+    "File": "external/dotpdn.paintdotnet.png",
+    "Sha256": "5592295109691b7aa21ca1aeaf6ebe11927faab3466402bfb7811c2c2d1f476f"
+  },
+  "Dropbox.Dropbox": {
+    "File": "external/dropbox.dropbox.png",
+    "Sha256": "d3a0b63ddf82e1cacc910dd475126387e90a833fdc267c88123ec68a6ffa141b"
+  },
+  "DucFabulous.UltraViewer": {
+    "File": "external/ducfabulous.ultraviewer.png",
+    "Sha256": "8a52bf34158ab2a2c13efee50a861a84909214c6bfe7fd5bf5f8164a7fdc16f6"
+  },
+  "DuckDuckGo.DesktopBrowser": {
+    "File": "external/duckduckgo.desktopbrowser.png",
+    "Sha256": "09a17822524b5917c0307ff96153fb06712e9c56e2d36092be6928110403985b"
+  },
+  "DuongDieuPhap.ImageGlass": {
+    "File": "external/duongdieuphap.imageglass.png",
+    "Sha256": "1413e3f669e83336932d2fe83807554eecdc8d0c1d2faabf81a9931defd43ec7"
+  },
+  "EclipseFoundation.Eclipse.Java": {
+    "File": "external/eclipsefoundation.eclipse.java.png",
+    "Sha256": "d52a969fde72c1616afff176dab1544cd0a2567e387dc5140d11c82bf299b2a5"
+  },
+  "edde746.Plezy": {
+    "File": "external/edde746.plezy.png",
+    "Sha256": "ef24985123cd0c50ab8d5cf79d758c022fbf88d38ba849e5ad08c18b59c9c556"
+  },
+  "ElectronicArts.EADesktop": {
+    "File": "external/electronicarts.eadesktop.png",
+    "Sha256": "75e75765191a2af3de0e856a231779547cbc47183766cdbdca90d6f97fd19790"
+  },
+  "Element.Element": {
+    "File": "external/element.element.png",
+    "Sha256": "c3abe2a885cbcb05fa73a1b40f541e46e5b84f3b4e8a44bead9c39f8e0c86054"
+  },
+  "Eloston.Ungoogled-Chromium": {
+    "File": "external/eloston.ungoogled-chromium.png",
+    "Sha256": "968b93f038c929ee22bbb11bcfbcd1894b6d3eacee53d9cc59c2e1294067dd42"
+  },
+  "eMClient.eMClient": {
+    "File": "external/emclient.emclient.png",
+    "Sha256": "930b2df051016732d576dd743e74605c7e44ecfddda00d2544828cd9ed0c1347"
+  },
+  "EpicGames.EpicGamesLauncher": {
+    "File": "external/epicgames.epicgameslauncher.png",
+    "Sha256": "ad131cf46ff6df53c1c902bd59c2aca904b4253764ad25787767aef9f7830241"
+  },
+  "Evernote.Evernote": {
+    "File": "external/evernote.evernote.png",
+    "Sha256": "073bdcef8a798a8b9374c1dbda3b755243fc5ded23fb4d59d545841a83336070"
+  },
+  "FastStone.Viewer": {
+    "File": "external/faststone.viewer.png",
+    "Sha256": "22493c3672cf00c6b7d78cacc2d29f9ff12bb2fdda7c59857bdf15bce9cb6262"
+  },
+  "File-New-Project.EarTrumpet": {
+    "File": "external/file-new-project.eartrumpet.png",
+    "Sha256": "e6b952cf7ea3d55dec7c08ec6042b3387f60ef23975b549da1476a9d22834da5"
+  },
+  "Flameshot.Flameshot": {
+    "File": "external/flameshot.flameshot.png",
+    "Sha256": "a7100ef36232e56e83a0d089a27d606a7dc9923c0a72f4df3b388a145762f98c"
+  },
+  "FxSound.FxSound": {
+    "File": "external/fxsound.fxsound.png",
+    "Sha256": "4f8c7e2397c1eadcd660904256ae162a91c7401aa7d5784242cc0cd4e55d4c91"
+  },
+  "geeksoftwareGmbH.PDF24Creator": {
+    "File": "external/geeksoftwaregmbh.pdf24creator.png",
+    "Sha256": "88b220d21638be01724017de9a0082fcbff5f1391e2051e0b27346983b8f8595"
+  },
+  "GIMP.GIMP.3": {
+    "File": "external/gimp.gimp.3.png",
+    "Sha256": "7ac1ba6b8e059b2f03683f49d91a6c11cb70cbb1095322f9b775ced6db5e347c"
+  },
+  "Giorgiotani.Peazip": {
+    "File": "external/giorgiotani.peazip.png",
+    "Sha256": "76461390eec153d19bd03857e55e0a3417230f899f93bcbd5afe9edaaf44fd8d"
+  },
+  "Git.Git": {
+    "File": "external/git.git.png",
+    "Sha256": "7aca3c686f0b89ae3eca614e582a22cc9373a6544267273d5f6708f9f1b23ae2"
+  },
+  "GitHub.GitHubDesktop": {
+    "File": "external/github.githubdesktop.png",
+    "Sha256": "4fca768ca9c0ae5073304c2971dcd9144991485ab42c0369f667d8fb3316dd4f"
+  },
+  "Giuspen.Cherrytree": {
+    "File": "external/giuspen.cherrytree.png",
+    "Sha256": "9e065fa76f581b70f30272e352d293474923bcae63a6f21384a5e11d786bcd0d"
+  },
+  "GlennDelahoy.SnappyDriverInstallerOrigin": {
+    "File": "external/glenndelahoy.snappydriverinstallerorigin.png",
+    "Sha256": "24b4cf381e6a2a1d3b943dc0a19f80ece1476147ff9071aa1345404943683891"
+  },
+  "GOG.Galaxy": {
+    "File": "external/gog.galaxy.png",
+    "Sha256": "ac1fcc4f16d4e6751453e852808bfe6bdc834d453c0cb412da42a3baa10492b6"
+  },
+  "GOMLab.GOMPlayer": {
+    "File": "external/gomlab.gomplayer.png",
+    "Sha256": "c2df67642ec7689f90aa15c3d6dd6ebf0c156563127ada6be0fb369b39beb657"
+  },
+  "Google.Chrome": {
+    "File": "external/google.chrome.png",
+    "Sha256": "71a6147d4e0709cc70622b170383fd082d61e58b2eac90892614004013ad59fe"
+  },
+  "Google.Chrome.EXE": {
+    "File": "external/google.chrome.png",
+    "Sha256": "71a6147d4e0709cc70622b170383fd082d61e58b2eac90892614004013ad59fe"
+  },
+  "Google.ChromeRemoteDesktopHost": {
+    "File": "external/google.chromeremotedesktophost.png",
+    "Sha256": "14824a4900a3a757ef07f6f716d838b1dd48bd0f2082546c4bf1fa2edbcf3432"
+  },
+  "Google.GoogleDrive": {
+    "File": "external/google.googledrive.png",
+    "Sha256": "c322495222565a934720f3e1b661189a30155b6b8dd2f6d69a4b486ee16c1305"
+  },
+  "Greenshot.Greenshot": {
+    "File": "external/greenshot.greenshot.png",
+    "Sha256": "95d08b405085ceffbc60a05b628ffc9b0fd046c6ba93997c446ba32293613aef"
+  },
+  "GuinpinSoft.MakeMKV": {
+    "File": "external/guinpinsoft.makemkv.png",
+    "Sha256": "ad968eca0c789ba8e288d14c843a04d0b8d7d1a3bed5b8544b498d27fc63eb49"
+  },
+  "Guru3D.Afterburner": {
+    "File": "external/guru3d.afterburner.png",
+    "Sha256": "29770e31e026db9f485d3d86262d1f09c474d0613f443e89fb0ff7fb533f6363"
+  },
+  "HandBrake.HandBrake": {
+    "File": "external/handbrake.handbrake.png",
+    "Sha256": "80bb52e2089758d1a2718f5e0946616b6db1e242d6a802ad82f62f0e642d862e"
+  },
+  "Hekasoft.Backup-Restore": {
+    "File": "external/hekasoft.backup-restore.png",
+    "Sha256": "3374e74ba00a6f113df116996dbff0f271136b4ae9faaaeb41e687feab484785"
+  },
+  "HulubuluSoftware.AdvancedRenamer": {
+    "File": "external/hulubulusoftware.advancedrenamer.png",
+    "Sha256": "f0486a350d07f9424d2a602b13ec8bb2a9e024c584bfbd003ba5e262f3d5c8ea"
+  },
+  "ImputNet.Helium": {
+    "File": "external/imputnet.helium.png",
+    "Sha256": "824e29c408624c43d9a73209e0b82cb17eddbb537f5041dd9acb3fa59ee2243d"
+  },
+  "Inkscape.Inkscape": {
+    "File": "external/inkscape.inkscape.png",
+    "Sha256": "db63976bca0997a7629b0ade041eb787bc0a813a6fb94b84b0a99371399f0f3a"
+  },
+  "input-leap.input-leap": {
+    "File": "external/input-leap.input-leap.png",
+    "Sha256": "d00f5c503b932a567e99da31419fb2f61b82bde1cc912d8e21eaee37017dd413"
+  },
+  "IObit.IObitUnlocker": {
+    "File": "external/iobit.iobitunlocker.png",
+    "Sha256": "8b1e25cb39a70e010d827834e4718c871afbc132f0dc8fdda918cc6fcd9e4e69"
+  },
+  "IObit.Uninstaller": {
+    "File": "external/iobit.uninstaller.png",
+    "Sha256": "3ef1d33bdc904d4a82096d408507e20fade96911b908bac385a71894bf596da2"
+  },
+  "IPVanish.SugarSync": {
+    "File": "external/ipvanish.sugarsync.png",
+    "Sha256": "f60a0060fd219c944e716ebb6f812b63e346efbd747abc2a5f70343bdf64b135"
+  },
+  "IrfanSkiljan.IrfanView": {
+    "File": "external/irfanskiljan.irfanview.png",
+    "Sha256": "626e703033dec43c53dc33f6a78e3c674e8e8fa1bd1ba86c65a12adb35ae0d49"
+  },
+  "irzyxa.Volume2Portable": {
+    "File": "external/irzyxa.volume2portable.png",
+    "Sha256": "25f696cfbb1af2b52561c76f524cb927bdb20c06e21af84dfc1c4c4eeac27078"
+  },
+  "JAMSoftware.TreeSize.Free": {
+    "File": "external/jamsoftware.treesize.free.png",
+    "Sha256": "c543aa9a582635373644a9af1855a474a274922c627bfdf0f986403d4c9d15b7"
+  },
+  "johnsadventures.JohnsBackgroundSwitcher": {
+    "File": "external/johnsadventures.johnsbackgroundswitcher.png",
+    "Sha256": "7aa19e349f25961a752b427b154fa6ba3afddd2a59970820f01ae00abfcdaee3"
+  },
+  "KDE.Kdenlive": {
+    "File": "external/kde.kdenlive.png",
+    "Sha256": "a382e9f79e82980112e1472b42c750a9fc18b10c6f37c53457c47d7cc772b821"
+  },
+  "KDE.Krita": {
+    "File": "external/kde.krita.png",
+    "Sha256": "02d5496539e3985f97e49978edd9689f1a963a21f4ffd1ea8da2309868e4fd82"
+  },
+  "KDE.Okular": {
+    "File": "external/kde.okular.png",
+    "Sha256": "83640a25a335b6fb6c5906692e5c3a6c3a41a6eb0b76c5306be710cf1ec0304b"
+  },
+  "KDE.Okular.AppX": {
+    "File": "external/kde.okular.png",
+    "Sha256": "83640a25a335b6fb6c5906692e5c3a6c3a41a6eb0b76c5306be710cf1ec0304b"
+  },
+  "LibreWolf.LibreWolf": {
+    "File": "external/librewolf.librewolf.png",
+    "Sha256": "16b409d04810d1af85f6d8c8434902df4ea4ad443297fa2b1f51159f3d8c65fb"
+  },
+  "LIGHTNINGUK.ImgBurn": {
+    "File": "external/lightninguk.imgburn.png",
+    "Sha256": "25760495e59ba83a23d6ed6b797ab3466c23f916a0da57cd8b4676249b1f6018"
+  },
+  "M2Team.NanaZip": {
+    "File": "external/m2team.nanazip.png",
+    "Sha256": "75826f86926b1971aa27462cbce4d92b67f57e8ef1b8fcd33824360dd5d90612"
+  },
+  "Malwarebytes.AdwCleaner": {
+    "File": "external/malwarebytes.adwcleaner.png",
+    "Sha256": "70b95ff8f60f779276c8f5059a8ec12b5757f8ee9ff177483fe50caa10a118d8"
+  },
+  "Malwarebytes.Malwarebytes": {
+    "File": "external/malwarebytes.malwarebytes.png",
+    "Sha256": "70b95ff8f60f779276c8f5059a8ec12b5757f8ee9ff177483fe50caa10a118d8"
+  },
+  "MartiCliment.UniGetUI": {
+    "File": "external/marticliment.unigetui.png",
+    "Sha256": "a996266c0b6dc53a9ebdfb3f58bc402b3b0246fa21810fb508553d16a42e1006"
+  },
+  "Maxthon.Maxthon": {
+    "File": "external/maxthon.maxthon.png",
+    "Sha256": "dbe2bb30b0704e00d61186e7b78ca3aa65d6a0fddf4a62da7ec74c430cc6bc9f"
+  },
+  "MediaArea.MediaInfo.GUI": {
+    "File": "external/mediaarea.mediainfo.gui.png",
+    "Sha256": "6de54b0928266fd7c028e792c904ca77f21df71a8b093216da97a9f536d12b3c"
+  },
+  "Meld.Meld": {
+    "File": "external/meld.meld.png",
+    "Sha256": "777dc69c24bb7485e3deaaa5e67a341e66fae8084674603e48d0437c9dda246e"
+  },
+  "Meltytech.Shotcut": {
+    "File": "external/meltytech.shotcut.png",
+    "Sha256": "a6f3995548cb9d0a7f563c1d179afdba2a0c526d086210d73e98e0d8ae570ad8"
+  },
+  "Microsoft.DirectX": {
+    "File": "external/microsoft.directx.png",
+    "Sha256": "d071ba99e044d43c9267d7b138022cf988444265035b6ff4119f93001342dfd6"
+  },
+  "Microsoft.DotNet.Framework.DeveloperPack_4": {
+    "File": "external/microsoft.dotnet.framework.developerpack_4.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.DotNet.Runtime.3_1": {
+    "File": "external/microsoft.dotnet.runtime.3_1.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.DotNet.Runtime.5": {
+    "File": "external/microsoft.dotnet.runtime.5.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.DotNet.Runtime.6": {
+    "File": "external/microsoft.dotnet.runtime.6.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.DotNet.Runtime.7": {
+    "File": "external/microsoft.dotnet.runtime.7.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.DotNet.Runtime.8": {
+    "File": "external/microsoft.dotnet.runtime.8.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.EdgeWebView2Runtime": {
+    "File": "external/microsoft.edgewebview2runtime.png",
+    "Sha256": "1f4e19c9b357a988b140c7b34bfdebacd9fd806902870be3bc7bf1c78b88d7db"
+  },
+  "Microsoft.Office": {
+    "File": "external/microsoft.office.png",
+    "Sha256": "a9d374487f622bf02a9bb9fad742e1cfbdb622807bd22c175f508a11afac36a4"
+  },
+  "Microsoft.PowerShell": {
+    "File": "external/microsoft.powershell.png",
+    "Sha256": "53897c11f49c07d294cf087ef71372850d405db3ebe4e2ca2d56b8aaeb50ffbd"
+  },
+  "Microsoft.PowerToys": {
+    "File": "external/microsoft.powertoys.png",
+    "Sha256": "f65fd258d9b50926837fb40466494f165a8ba6b524c067d944971699b931d194"
+  },
+  "Microsoft.VCRedist.2005.x64": {
+    "File": "external/microsoft.vcredist.2005.x64.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2005.x86": {
+    "File": "external/microsoft.vcredist.2005.x86.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2008.x64": {
+    "File": "external/microsoft.vcredist.2008.x64.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2008.x86": {
+    "File": "external/microsoft.vcredist.2008.x86.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2010.x64": {
+    "File": "external/microsoft.vcredist.2010.x64.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2010.x86": {
+    "File": "external/microsoft.vcredist.2010.x86.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2012.x64": {
+    "File": "external/microsoft.vcredist.2012.x64.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2012.x86": {
+    "File": "external/microsoft.vcredist.2012.x86.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2013.x64": {
+    "File": "external/microsoft.vcredist.2013.x64.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VCRedist.2013.x86": {
+    "File": "external/microsoft.vcredist.2013.x86.png",
+    "Sha256": "2962abb351166b1e16628cfa52f7acb56496ac2961d746119bc1a9c32686d8e5"
+  },
+  "Microsoft.VisualStudioCode": {
+    "File": "external/microsoft.visualstudiocode.png",
+    "Sha256": "47669b3a87b9c2809bb27cf56fd00c4c24f84bc373c331f8f33c5dd42e83f624"
+  },
+  "MoonchildProductions.PaleMoon": {
+    "File": "external/moonchildproductions.palemoon.png",
+    "Sha256": "a476c72b9ba73b1794ef1b23e78f3ed6311acb57dca5f352eaf3c530cfbd32df"
+  },
+  "Mozilla.Firefox": {
+    "File": "external/mozilla.firefox.png",
+    "Sha256": "d25cecceafc0dcb575deb29b976083d768437de9c16866f360ad21bd74548f76"
+  },
+  "Mozilla.Thunderbird": {
+    "File": "external/mozilla.thunderbird.png",
+    "Sha256": "923d2fba311fc9dfa3553a41d46b0a35f4788d43f49b399c9cfc850dc2d93081"
+  },
+  "MPC-BE.MPC-BE": {
+    "File": "external/mpc-be.mpc-be.png",
+    "Sha256": "4c5c88a6324e952955b650ee987c80069ce0d9c479b048207882c5084abf72c0"
+  },
+  "MullvadVPN.MullvadBrowser": {
+    "File": "external/mullvadvpn.mullvadbrowser.png",
+    "Sha256": "5641a7650687e20bd3b09f48aa1ce5c389cd6d636752a368e051e18734e965c0"
+  },
+  "Nextcloud.NextcloudDesktop": {
+    "File": "external/nextcloud.nextclouddesktop.png",
+    "Sha256": "2eb180d3019cde4d9d2faed9b0cdb760fbb0c42db2830f6a9c16601a922fbf8c"
+  },
+  "Nilesoft.Shell": {
+    "File": "external/nilesoft.shell.png",
+    "Sha256": "d6d11b3e509b0dd0f12a63b88007b3c7a9472a842260343ad270184a6297939d"
+  },
+  "OBSProject.OBSStudio": {
+    "File": "external/obsproject.obsstudio.png",
+    "Sha256": "26b6916848b141561ae5fa1998dba23501f9c2d33dc4a23b4127ca45f3be669f"
+  },
+  "OnionShare.OnionShare": {
+    "File": "external/onionshare.onionshare.png",
+    "Sha256": "124f40182ee9fe89803f878457b7c28012f10a45c7cbc4bddf07068dff4205ff"
+  },
+  "ONLYOFFICE.DesktopEditors": {
+    "File": "external/onlyoffice.desktopeditors.png",
+    "Sha256": "d0c069a553aa7b70a40ab939210477e4bae5e309789dd70dbc924573da0a344d"
+  },
+  "OO-Software.ShutUp10": {
+    "File": "external/oo-software.shutup10.png",
+    "Sha256": "b11cbf33c581749ba6244ec97e132d44aa94466a249986b7d007459196dc37e5"
+  },
+  "Open-Shell.Open-Shell-Menu": {
+    "File": "external/open-shell.open-shell-menu.png",
+    "Sha256": "c22137ccb437d63fda4d09f1a9845f34d2e6cf9dd55be22391f09dec7a8e9bf9"
+  },
+  "OpenAudible.OpenAudible": {
+    "File": "external/openaudible.openaudible.png",
+    "Sha256": "d314b021ea2dccc16e8e9be7a74526fc01191bd182d47398756ce53c96c840ee"
+  },
+  "OpenRGB.OpenRGB": {
+    "File": "external/openrgb.openrgb.png",
+    "Sha256": "600a58e9c6291372014fcef87ef260c801ca2d4ecc41626dc9c08b7b80accb53"
+  },
+  "Opera.Opera": {
+    "File": "external/opera.opera.png",
+    "Sha256": "cf8bd453352099dbf0ae2fc40ac06ccfc740df36d4f34dd0ee398612473af44b"
+  },
+  "Opera.OperaGX": {
+    "File": "external/opera.operagx.png",
+    "Sha256": "f3682e1893ae0eeb88bf08eab433f5be06134ead019444fa747c85934bdd6e87"
+  },
+  "Oracle.JavaRuntimeEnvironment": {
+    "File": "external/oracle.javaruntimeenvironment.png",
+    "Sha256": "0c586f4cda21de6ce26c8e86e88f340b578ea611961f35a52c21908732188cf3"
+  },
+  "Oracle.VirtualBox": {
+    "File": "external/oracle.virtualbox.png",
+    "Sha256": "ad2fea0f4e50af25e39c8da9d3e51e1998f50857b768d9c1710c9cc7ba4e701d"
+  },
+  "Parsec.Parsec": {
+    "File": "external/parsec.parsec.png",
+    "Sha256": "f8a7034d2b5ba895d2d88866be903e2e2f644bfe9ba631c97ae7337a726cf536"
+  },
+  "Parsec.ParsecVDD": {
+    "File": "external/parsec.parsecvdd.png",
+    "Sha256": "f8a7034d2b5ba895d2d88866be903e2e2f644bfe9ba631c97ae7337a726cf536"
+  },
+  "Parsec.ParsecVUD": {
+    "File": "external/parsec.parsecvud.png",
+    "Sha256": "f8a7034d2b5ba895d2d88866be903e2e2f644bfe9ba631c97ae7337a726cf536"
+  },
+  "PDFgear.PDFgear": {
+    "File": "external/pdfgear.pdfgear.png",
+    "Sha256": "6d7b6c67bd2dfdb78e028184e729d59b9b0aa34590078b90c060aaf4a8100c5d"
+  },
+  "PeterPawlowski.foobar2000": {
+    "File": "external/peterpawlowski.foobar2000.png",
+    "Sha256": "5d54ac11c7cd0003b85a7d192010515b6827fc7d360105aa81a19d1c4080a0cb"
+  },
+  "Pidgin.Pidgin": {
+    "File": "external/pidgin.pidgin.png",
+    "Sha256": "b3e2a8df8571cf4f8b51dd9779e3f67272dd318d2dca849e204312d4f2bf8e70"
+  },
+  "Piriform.CCleaner": {
+    "File": "external/piriform.ccleaner.png",
+    "Sha256": "07778b9f110aac4e9f8b4eb3a3df941d0685de03ce5bd17dc9590ef2e0be4edc"
+  },
+  "Playnite.Playnite": {
+    "File": "external/playnite.playnite.png",
+    "Sha256": "e16955e1caaa3908364e1a705529f59182ec85decaabc4e088ded714113bd656"
+  },
+  "Plex.Plex": {
+    "File": "external/plex.plex.png",
+    "Sha256": "16b1d5c0d818fe72516e5fbdade49226fcf31a054269b7099b635c4777fe1029"
+  },
+  "Plex.PlexMediaServer": {
+    "File": "external/plex.plexmediaserver.png",
+    "Sha256": "f09327c01683890efde22c7020bfea14745e2652ebad1772350cc0ee5d0c0999"
+  },
+  "PowerSoftware.AnyBurn": {
+    "File": "external/powersoftware.anyburn.png",
+    "Sha256": "17503d96bd4015bc9305d73b7266b239880c37e887d0b666f2bc13e91bcf29a4"
+  },
+  "Proton.ProtonDrive": {
+    "File": "external/proton.protondrive.png",
+    "Sha256": "2146b90035b69ba4240da3b60ec4b8d47750c36e2ca063c45439d4db4865da66"
+  },
+  "Proton.ProtonMail": {
+    "File": "external/proton.protonmail.png",
+    "Sha256": "53950e5645b5b3ce320b3723dd72e38a34c0389d0f844a630233c6f3d392cdbb"
+  },
+  "Proton.ProtonVPN": {
+    "File": "external/proton.protonvpn.png",
+    "Sha256": "b2dadbb195e54dc21a44561195b66f330fcac4c5895aec678489b67cc652fb1d"
+  },
+  "PuTTY.PuTTY": {
+    "File": "external/putty.putty.png",
+    "Sha256": "1b1f70b29dbe7772612309c0d0b6b9ee2bc55471f6eb9efe5a563d9ad4afaaea"
+  },
+  "Python.Python.3.13": {
+    "File": "external/python.python.3.13.png",
+    "Sha256": "4d9303b71249cb4dafa7f6e58c5d783fb60a549a3f39afca3107c774679f4ca0"
+  },
+  "qBittorrent.qBittorrent": {
+    "File": "external/qbittorrent.qbittorrent.png",
+    "Sha256": "36af88cbd93a5fda66d0a353b5cc2a8c143a917790e6147fc5b8a3ee810ac592"
+  },
+  "Rainmeter.Rainmeter": {
+    "File": "external/rainmeter.rainmeter.png",
+    "Sha256": "cebbd8cdc3608c1c8c02b820ce3d6339b319fa44e1434a2c582c3d63581fe7df"
+  },
+  "RamenSoftware.Windhawk": {
+    "File": "external/ramensoftware.windhawk.png",
+    "Sha256": "6836dc3e86775664a5bf642af88c723dd133181f6ba920fe7b33c6ea0e610569"
+  },
+  "RARLab.WinRAR": {
+    "File": "external/rarlab.winrar.png",
+    "Sha256": "0736af85ccbc0928eb3b16c6a2f4f0efeb35e27196db6ae0829d70aba7530a98"
+  },
+  "RealVNC.VNCServer": {
+    "File": "external/realvnc.vncserver.png",
+    "Sha256": "00b843c5b16787c007cd61248eb4ea037dbe09dc913e01628dc82860a70f5d7f"
+  },
+  "RealVNC.VNCViewer": {
+    "File": "external/realvnc.vncviewer.png",
+    "Sha256": "1070a7881531a67df7be18393c8d4a59f17c9fd32cb14544913f24fddd811b28"
+  },
+  "Rem0o.FanControl": {
+    "File": "external/rem0o.fancontrol.png",
+    "Sha256": "bbab3df51ad01017684109cb32b2d4efcfff6b0217861099d5ddf6c97f15fae5"
+  },
+  "RevoUninstaller.RevoUninstaller": {
+    "File": "external/revouninstaller.revouninstaller.png",
+    "Sha256": "49de2d2c026aa0d462d3defde2110ea58bd834b5f42e983bdf6a47fa97646a68"
+  },
+  "rocksdanister.LivelyWallpaper": {
+    "File": "external/rocksdanister.livelywallpaper.png",
+    "Sha256": "b65b8a121b48d987210e821a5eedcb3ace98d22cdc54396bec236a1b4d3abf3a"
+  },
+  "RockstarGames.Launcher": {
+    "File": "external/rockstargames.launcher.png",
+    "Sha256": "6d853da434955bbdf503cacb7004c195caec543482e0e9df4deb4f4381955425"
+  },
+  "Rufus.Rufus": {
+    "File": "external/rufus.rufus.png",
+    "Sha256": "69eb4b112bf6794e586ea98a10c005c878123331696f36610b375fd4382d7a84"
+  },
+  "RustDesk.RustDesk": {
+    "File": "external/rustdesk.rustdesk.png",
+    "Sha256": "9dc3ea42b25890c70a1b31d37e89c39a02a4f2bbc1a7d80cbbf6859a40bb4973"
+  },
+  "SanDisk.Dashboard": {
+    "File": "external/sandisk.dashboard.png",
+    "Sha256": "1c355204c49a04416296b8ab65554b898eff89ba0e59d2877ed5717eec52d1db"
+  },
+  "ShareX.ShareX": {
+    "File": "external/sharex.sharex.png",
+    "Sha256": "faa91d52d89fe439ace5976d199eed7112a5c2fa97dc2b015fa5bc3d98bded6c"
+  },
+  "SMPlayer.SMPlayer": {
+    "File": "external/smplayer.smplayer.png",
+    "Sha256": "59f9098c8b03dda819ed5ba30e5bab2c36a1eb778d653989d08d37384b3abe80"
+  },
+  "Spotify.Spotify": {
+    "File": "external/spotify.spotify.png",
+    "Sha256": "b99976697d8ad7eb166de333d6e17e8a379d3e9de9cd6780b24043f2d6a5e254"
+  },
+  "StartIsBack.StartAllBack": {
+    "File": "external/startisback.startallback.png",
+    "Sha256": "0dfc33de3e9a1f67ae5cfde4a891c23ba421e8d7c86b97ee9bd43a72889bd1ec"
+  },
+  "StartIsBack.StartIsBack": {
+    "File": "external/startisback.startisback.png",
+    "Sha256": "c7a6cd2f8575289c9cae44a2f57974b34bc2129f944aba7836b355a55ca80388"
+  },
+  "SumatraPDF.SumatraPDF": {
+    "File": "external/sumatrapdf.sumatrapdf.png",
+    "Sha256": "5b830cab170151d5d93982a21cac985efbc63a760452141d2a3de510380020d9"
+  },
+  "Taiizor.SucroseWallpaperEngine": {
+    "File": "external/taiizor.sucrosewallpaperengine.png",
+    "Sha256": "09034abe6f829b3a0c4b73738bf381fab7eb8770d1c67f20b9b90374cca7b52c"
+  },
+  "TeamViewer.TeamViewer": {
+    "File": "external/teamviewer.teamviewer.png",
+    "Sha256": "2915e0e69b5cef9c332ba765f109bdecf3000a4ac35b9fafeb2124cfcb93f350"
+  },
+  "Telegram.TelegramDesktop": {
+    "File": "external/telegram.telegramdesktop.png",
+    "Sha256": "233f3ab6fde9844bd98e16a090eb9a1524dcde75acdfb5e1cb9d43e05ea92dfd"
+  },
+  "TGRMNSoftware.BulkRenameUtility": {
+    "File": "external/tgrmnsoftware.bulkrenameutility.png",
+    "Sha256": "1ea6fd03ab9c697a3cd6ba13b0e62562e503bab44a6a5fcae190e28ecf44eb77"
+  },
+  "TheBrowserCompany.Arc": {
+    "File": "external/thebrowsercompany.arc.png",
+    "Sha256": "a7116addfbb36607d57010a7d51edc2cf75c4480ade0394a5da8a0950f357645"
+  },
+  "TheDocumentFoundation.LibreOffice": {
+    "File": "external/thedocumentfoundation.libreoffice.png",
+    "Sha256": "ec6db866230846de2de6df65165f624c5e3e51ee0a7007b0fa986b97e7b44b4a"
+  },
+  "Tonec.InternetDownloadManager": {
+    "File": "external/tonec.internetdownloadmanager.png",
+    "Sha256": "19f3ede9006b4fe90b50b31abb2943183c5623f8c8ec8b8642ae0e77cb63ecf8"
+  },
+  "TorProject.TorBrowser": {
+    "File": "external/torproject.torbrowser.png",
+    "Sha256": "1ebe87bd35271e128cd620bf1c56800196b9b6713a6b86cc96e60e4633a96430"
+  },
+  "Ubisoft.Connect": {
+    "File": "external/ubisoft.connect.png",
+    "Sha256": "1e280a155400d2335102cde3cb10cac790f04ee5458214746a8250aee8b76620"
+  },
+  "valinet.ExplorerPatcher": {
+    "File": "external/valinet.explorerpatcher.png",
+    "Sha256": "8d77ff4ac99a48aac46d0163a49494f7afbbd6cd34a3469d56910fb808c614d1"
+  },
+  "Valve.Steam": {
+    "File": "external/valve.steam.png",
+    "Sha256": "9db4aeaff28ca9bbecbbd420a1159e63502aa51f4806b89dc045c73ba810e1c7"
+  },
+  "VentisMedia.MediaMonkey.5": {
+    "File": "external/ventismedia.mediamonkey.5.png",
+    "Sha256": "3149abba94fd73b22a3eb52c028a8f0ca9c88f64b4f4db1198cc295fa2ed399a"
+  },
+  "Ventoy.Ventoy": {
+    "File": "external/ventoy.ventoy.png",
+    "Sha256": "34f4839c80dd45a295f6ad6c6526e4599a479a60bb7f30e6130c0bf3f2f59ca2"
+  },
+  "VideoLAN.VLC": {
+    "File": "external/videolan.vlc.png",
+    "Sha256": "3505e4bfbeb7cbfdf782901e715353051aec6e06b005e7fd4096a071a4af0bc4"
+  },
+  "Vivaldi.Vivaldi": {
+    "File": "external/vivaldi.vivaldi.png",
+    "Sha256": "8c557989ef8766fde1c9248c70f93519a554e7013530c43afe6bd96c9b31baae"
+  },
+  "voidtools.Everything": {
+    "File": "external/voidtools.everything.png",
+    "Sha256": "a61660f9dade9b20816e169d7cde67bb19e56bcfc942e8ecc47437f12e79bb2c"
+  },
+  "Waterfox.Waterfox": {
+    "File": "external/waterfox.waterfox.png",
+    "Sha256": "244464b4069fe98e7c0b6b8aca0a90d9d358283d7574cde590660900d2499d74"
+  },
+  "WinDirStat.WinDirStat": {
+    "File": "external/windirstat.windirstat.png",
+    "Sha256": "cb8b3f12b79f2cb6378b5595f36035aec8df76ba564916a23fb5d0df97773d6e"
+  },
+  "WinMerge.WinMerge": {
+    "File": "external/winmerge.winmerge.png",
+    "Sha256": "4e4f38b557f28238d2c8738d01c1bed1834aa92c0333c6649195950490f40039"
+  },
+  "WinSCP.WinSCP": {
+    "File": "external/winscp.winscp.png",
+    "Sha256": "cc0bfaf00507291d70168facabdccaff5bf9871b4c5125ba7e1a6eba90c896dc"
+  },
+  "WinStep.Nexus": {
+    "File": "external/winstep.nexus.png",
+    "Sha256": "c27beff32ad6de68181c18cf222e03912ee683de75873548544e914dae110f4a"
+  },
+  "WiseCleaner.WiseDiskCleaner": {
+    "File": "external/wisecleaner.wisediskcleaner.png",
+    "Sha256": "9d534cb32e1fb93dca5931109f2819a3a473c5363d4003bf4f9bdf81e06055d6"
+  },
+  "WiseCleaner.WiseRegistryCleaner": {
+    "File": "external/wisecleaner.wiseregistrycleaner.png",
+    "Sha256": "cb01bebd553b424692415a2cbdb2e563658e408db9e4f121af3a8f9210fc6ea2"
+  },
+  "WsSolInfor.CrystalDiskInfo": {
+    "File": "external/wssolinfor.crystaldiskinfo.png",
+    "Sha256": "97ec6d5d0b19eae3d5985926ac475ab53d6be35b638552bd3ccd8aa73f347c08"
+  },
+  "XnSoft.XnView.Classic": {
+    "File": "external/xnsoft.xnview.classic.png",
+    "Sha256": "bf0faa9d0fbb478ac35d3426a1c36c243c952d1e3ad9ddce57143b15a55e9a65"
+  },
+  "XnSoft.XnViewMP": {
+    "File": "external/xnsoft.xnviewmp.png",
+    "Sha256": "c5ff44fd8a701eaebb4cb8cc5d2c91a85ff0e3ce674a22cb3647ba06a7c94292"
+  },
+  "Zen-Team.Zen-Browser": {
+    "File": "external/zen-team.zen-browser.png",
+    "Sha256": "c650fb1ce6a0ae5ef5a2c4853afd6596213e05bb79231b746b92750d33401118"
+  },
+  "Zoom.Zoom": {
+    "File": "external/zoom.zoom.png",
+    "Sha256": "4c1dd4dc46d1b7c6aee2f25d8977733670f80920180c220ac04440958120ceb0"
+  }
+}

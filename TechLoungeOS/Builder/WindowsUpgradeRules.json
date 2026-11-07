@@ -1,0 +1,40 @@
+{
+  "Schema": 1,
+  "Rules": [
+    {
+      "Id": "win11-26h2-x64",
+      "Name": "26H2",
+      "SourceBuilds": [
+        26100,
+        26200
+      ],
+      "TargetBuild": 26300,
+      "MinimumRevision": 9546,
+      "Editions": [
+        "Core",
+        "CoreN",
+        "CoreSingleLanguage",
+        "Professional",
+        "ProfessionalN",
+        "ProfessionalEducation",
+        "ProfessionalEducationN",
+        "ProfessionalWorkstation",
+        "ProfessionalWorkstationN",
+        "Education",
+        "EducationN",
+        "Enterprise",
+        "EnterpriseN",
+        "EnterpriseMultiSession",
+        "ServerRdsh",
+        "IoTEnterprise",
+        "IoTEnterpriseK"
+      ],
+      "KnowledgeBase": "KB5121794",
+      "File": "Windows11.0-KB5121794-x64_5e20a3cce48d6611b16bdec42b07167f5456586a.msu",
+      "Address": "https://catalog.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/94520a88-858f-4832-a57d-7211f6d84a4e/public/Windows11.0-KB5121794-x64_5e20a3cce48d6611b16bdec42b07167f5456586a.msu",
+      "Bytes": 177535,
+      "Sha256": "BF43EB13B7EBDE920C2201473BFD5C531B45E0F46ACD8E0843F27F9744FB4B43",
+      "Support": "https://support.microsoft.com/en-us/servicing/os/windows-11/2026/09/kb5121794-feature-update-to-windows-11-version-26h2"
+    }
+  ]
+}

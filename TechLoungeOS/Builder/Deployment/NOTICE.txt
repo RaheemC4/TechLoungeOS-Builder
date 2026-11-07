@@ -1,0 +1,10 @@
+TechLoungeOS deployment
+======================
+
+Microsoft 365 is installed using Microsoft's Office Deployment Tool.
+Users activate Office with their own Microsoft account or valid licence.
+No Office activation bypass is embedded or run by this Builder package.
+
+The owner's separately supplied TechLoungeOS-Standalone.cmd is retained
+unchanged in the local development workspace, outside release assets.
+It is not an Office installation dependency and is not scheduled by Builder.

@@ -1,0 +1,40 @@
+TechLoungeOS Builder 0.1.35
+
+Extract the whole package and open TechLoungeOS.Builder.exe. Keep its support
+folders beside it. The Builder needs Windows 11 x64, administrator permission
+and local NTFS working space. ISO export needs the Windows ADK Deployment Tools
+(oscdimg.exe); the app uses the standard installed location or a tool you locate.
+
+1. Windows image: choose your ISO and edition. Windows-version updates are here.
+2. Choose components, optional apps, wallpaper, region and keyboard.
+3. Finish: save an ISO, create a setup USB, or do both. Your imported image and
+   choices carry through automatically; you do not need to select the ISO again.
+4. Confirm the exact USB before erasing it. Back up the spare PC before installing.
+
+The original ISO is kept unless you explicitly select and confirm replacement.
+The app checks media size and working space. A 16 GB USB must have sufficient
+actual capacity; components are never removed automatically just to make it fit.
+
+WinPE lets you choose an initial local account and optional PC name/password.
+Automatic sign-in and later Hello enrolment are separate choices. Additional
+Windows users are created in Windows. Account/region answers supplied to the
+wizard are reused by Windows Setup.
+
+The desktop opens before Builder-owned long installers. Keep the PC online while
+selected apps finish quietly; use the setup window for progress, logs and retry.
+Boot Optimizer runs after the required apps and Office finish successfully.
+Microsoft 365 uses normal Microsoft deployment and your own account or licence.
+The supplied activation-bypass Standalone is not embedded or run by the Builder.
+
+Generated images apply the chosen desktop plus the included legacy-network, UAC
+and Internet-zone defaults. Automatic Recommended excludes Defender changes and
+Windows Update pauses. Security software can still block individual upstream
+Tweaks utilities; there are no blanket antivirus exceptions or guarantees.
+
+Check for updates in the top right checks the Builder app. Windows updates inside
+an ISO are separate. Only reviewed upgrade routes are supported; failed health or
+preservation checks stop export. Builder updates are downloaded from the separate
+TechLoungeOS-Builder GitHub releases and checked before installation.
+
+Read the repository's current compatibility and test results. A preview video
+shows the interface; it is not installation proof for every ISO or computer.

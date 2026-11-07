@@ -1,0 +1,11 @@
+{
+  "schema": 2,
+  "app_revision": "5dd289fe8c825fe17d57facf527d80abebcec0ec22ca3310ef28980d992d5b19",
+  "version": "2026.10.23.174632",
+  "distribution": "installer",
+  "files": {
+    "TechLoungeTweaks/TechLoungeTweaks.zip": "7f42269fa18526ee14ff4f804bc3836dc57fd2e1575d10bdb2a7e80e6101a982"
+  },
+  "release_tag": "app-2026.10.23.174632-7f42269fa185",
+  "download_url": "https://github.com/RaheemC4/tech-tips/releases/download/app-2026.10.23.174632-7f42269fa185/TechLoungeTweaks.zip"
+}

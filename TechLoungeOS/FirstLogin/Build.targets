@@ -1,0 +1,18 @@
+<Project>
+  <ItemGroup>
+    <FirstLoginSource Include="$(MSBuildThisFileDirectory)Launcher.cs;$(MSBuildThisFileDirectory)DesktopReady.cs;$(MSBuildThisFileDirectory)SetupProgress.cs;$(MSBuildThisFileDirectory)SetupSurface.cs;$(MSBuildThisFileDirectory)AssemblyInfo.cs"/>
+    <FirstLoginFont Include="$(MSBuildThisFileDirectory)Fonts/Sora-Regular.ttf"><LogicalName>TechLoungeOS.SoraRegular.ttf</LogicalName></FirstLoginFont>
+    <FirstLoginFont Include="$(MSBuildThisFileDirectory)Fonts/Sora-SemiBold.ttf"><LogicalName>TechLoungeOS.SoraSemibold.ttf</LogicalName></FirstLoginFont>
+  </ItemGroup>
+  <Target Name="BuildFirstLoginLauncher" BeforeTargets="PrepareForBuild"
+          Inputs="$(MSBuildThisFileFullPath);@(FirstLoginSource);@(FirstLoginFont);$(MSBuildThisFileDirectory)../Builder/Assets/TechLoungeOS-Builder.ico"
+          Outputs="$(IntermediateOutputPath)FirstLogin.exe">
+    <MakeDir Directories="$(IntermediateOutputPath)"/>
+    <Csc Sources="@(FirstLoginSource)" Resources="@(FirstLoginFont)"
+         OutputAssembly="$(IntermediateOutputPath)FirstLogin.exe" TargetType="winexe" Platform="x64"
+         Optimize="true" Deterministic="true" NoStandardLib="true" NoConfig="true" Utf8Output="true"
+         Win32Icon="$(MSBuildThisFileDirectory)../Builder/Assets/TechLoungeOS-Builder.ico"
+         References="$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\mscorlib.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Drawing.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Web.Extensions.dll"/>
+  </Target>
+  <ItemGroup><Content Include="$(IntermediateOutputPath)FirstLogin.exe" Link="FirstLogin.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/></ItemGroup>
+</Project>

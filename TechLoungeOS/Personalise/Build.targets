@@ -1,0 +1,11 @@
+<Project>
+ <ItemGroup>
+  <Compile Include="$(MSBuildThisFileDirectory)Catalog.cs" Link="WallpaperCatalog.cs"/>
+  <Content Include="$(MSBuildThisFileDirectory)../Builder/Wallpapers/*.png" Link="Wallpapers/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
+  <Content Include="$(IntermediateOutputPath)Personalise.exe" Link="Personalise.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/>
+ </ItemGroup>
+ <Target Name="BuildPersonaliseLauncher" BeforeTargets="PrepareForBuild" Inputs="$(MSBuildThisFileDirectory)Catalog.cs;$(MSBuildThisFileDirectory)Renderer.cs;$(MSBuildThisFileDirectory)Desktop.cs;$(MSBuildThisFileDirectory)Program.cs;$(MSBuildThisFileDirectory)app.manifest" Outputs="$(IntermediateOutputPath)Personalise.exe">
+  <MakeDir Directories="$(IntermediateOutputPath)"/>
+  <Exec Command="&quot;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\csc.exe&quot; /nologo /target:winexe /platform:x64 /optimize+ /out:&quot;$(IntermediateOutputPath)Personalise.exe&quot; /win32manifest:&quot;$(MSBuildThisFileDirectory)app.manifest&quot; /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll &quot;$(MSBuildThisFileDirectory)Catalog.cs&quot; &quot;$(MSBuildThisFileDirectory)Renderer.cs&quot; &quot;$(MSBuildThisFileDirectory)Desktop.cs&quot; &quot;$(MSBuildThisFileDirectory)Program.cs&quot;"/>
+ </Target>
+</Project>

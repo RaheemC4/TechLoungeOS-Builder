@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+ <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><AssemblyName>TechLoungeOS.Updater</AssemblyName><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><TreatWarningsAsErrors>true</TreatWarningsAsErrors><ApplicationManifest>../Builder/app.manifest</ApplicationManifest></PropertyGroup>
+ <ItemGroup><Compile Include="../Builder/UpdateTrust.cs" Link="UpdateTrust.cs"/><Compile Include="../Builder/UpdatePackage.cs" Link="UpdatePackage.cs"/><Compile Include="../Builder/UpdateCommit.cs" Link="UpdateCommit.cs"/><Compile Include="../Builder/UpdateStorage.cs" Link="UpdateStorage.cs"/><Compile Include="../Builder/UpdateCoordinator.cs" Link="UpdateCoordinator.cs"/></ItemGroup>
+</Project>

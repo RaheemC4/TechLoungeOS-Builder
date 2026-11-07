@@ -1,0 +1,13 @@
+wimlib 1.14.5, unmodified official Windows x86_64 distribution, January2026.
+Copyright Eric Biggers and contributors. The command-line tool is GPLv3+.
+See the accompanying COPYING files and source.tar.gz for matching source.
+
+Binary: https://wimlib.net/downloads/wimlib-1.14.5-windows-x86_64-bin.zip
+Archive SHA256: 2F446D6FA3866582175F1A22A7BE198EEEE0AEC7ABA5B4E04AD25C99EAE2D265
+Source: https://wimlib.net/downloads/wimlib-1.14.5.tar.gz
+Source SHA256: 84221A3ABD5B91228F15F8E6065C335A336237B5738197B75BF419EEA561A194
+
+Builder uses this separate executable only to recompress an accepted image.
+DISM remains responsible for offline Windows servicing. No components are
+removed by compression. Two compression threads bound memory consumption.
+The compressor and matching source/licences are not installed into Windows.

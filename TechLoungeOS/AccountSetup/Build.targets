@@ -1,0 +1,10 @@
+<Project>
+ <Target Name="BuildAccountSetup" BeforeTargets="PrepareForBuild" Inputs="$(MSBuildThisFileFullPath);$(MSBuildThisFileDirectory)Program.cs;$(MSBuildThisFileDirectory)RuntimePolicy.cs" Outputs="$(IntermediateOutputPath)AccountSetup.exe">
+  <MakeDir Directories="$(IntermediateOutputPath)"/>
+  <Csc Sources="$(MSBuildThisFileDirectory)Program.cs;$(MSBuildThisFileDirectory)RuntimePolicy.cs"
+       OutputAssembly="$(IntermediateOutputPath)AccountSetup.exe" TargetType="winexe" Platform="x64"
+       Optimize="true" Deterministic="true" NoStandardLib="true" NoConfig="true" Utf8Output="true"
+       References="$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\mscorlib.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Core.dll;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\System.Windows.Forms.dll"/>
+ </Target>
+ <ItemGroup><Content Include="$(IntermediateOutputPath)AccountSetup.exe" Link="AccountSetup.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/></ItemGroup>
+</Project>

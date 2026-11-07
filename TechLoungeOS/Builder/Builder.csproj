@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
+    <AssemblyName>TechLoungeOS.Builder</AssemblyName>
+    <Version>0.1.35</Version><AssemblyVersion>0.1.35.0</AssemblyVersion><Product>TechLoungeOS Builder</Product>
+    <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets/TechLoungeOS-Builder.ico</ApplicationIcon>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup><Using Include="System.IO"/><EmbeddedResource Include="WindowsUpgradeRules.json" LogicalName="TechLoungeOS.WindowsUpgradeRules.json"/></ItemGroup>
+  <ItemGroup><InternalsVisibleTo Include="UiChecks"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="NvidiaSetup.ps1" LogicalName="TechLoungeOS.NvidiaSetup.ps1"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="GraphicsSetup.ps1" LogicalName="TechLoungeOS.GraphicsSetup.ps1"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="TweaksInstaller.ps1" LogicalName="TechLoungeOS.TweaksInstaller.ps1"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Assets/AppIcons/*.png" LogicalName="TechLoungeOS.AppIcons.%(Filename)%(Extension)"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="../PeBackground/PeBackground.exe" LogicalName="TechLoungeOS.PeBackground.exe"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Deployment/ExplorerPlusPlus/*" LogicalName="TechLoungeOS.PeTools.%(Filename)%(Extension)"/></ItemGroup>
+  <ItemGroup><EmbeddedResource Include="Deployment/Wimlib/*" Exclude="Deployment/Wimlib/NOTICE.txt" LogicalName="TechLoungeOS.WimPacking.%(Filename)%(Extension)"/></ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Artwork/catalog.json" LogicalName="TechLoungeOS.Builder.Artwork.catalog.json" />
+    <Resource Include="Assets/TechLoungeOS-Builder.ico" />
+    <Resource Include="Assets/TechLoungeOS-Builder.png" />
+    <Content Include="Artwork/THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Create-Shortcut.ps1" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="../../docs/START-HERE.txt" Link="Read me.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <Content Include="Deployment/NOTICE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="BuildDiscordLauncher" BeforeTargets="PrepareForBuild" Inputs="../DiscordLauncher/Launcher.cs;../DiscordLauncher/ShellLinks.cs" Outputs="$(IntermediateOutputPath)DiscordLauncher.exe">
+    <MakeDir Directories="$(IntermediateOutputPath)"/>
+    <Exec Command="&quot;$(SystemRoot)\Microsoft.NET\Framework64\v4.0.30319\csc.exe&quot; /nologo /target:winexe /platform:x64 /optimize+ /out:&quot;$(IntermediateOutputPath)DiscordLauncher.exe&quot; /reference:System.dll /reference:System.Core.dll /reference:Microsoft.CSharp.dll /reference:System.Web.Extensions.dll &quot;$(MSBuildProjectDirectory)\..\DiscordLauncher\Launcher.cs&quot; &quot;$(MSBuildProjectDirectory)\..\DiscordLauncher\ShellLinks.cs&quot;"/>
+  </Target>
+  <ItemGroup><Content Include="$(IntermediateOutputPath)DiscordLauncher.exe" Link="DiscordLauncher.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/></ItemGroup>
+  <Import Project="../FirstLogin/Build.targets"/>
+  <Target Name="PublishUpdater" AfterTargets="Publish" Condition="'$(RuntimeIdentifier)' == 'win-x64'">
+    <MSBuild Projects="../Updater/Updater.csproj" Targets="Restore;Publish" Properties="Configuration=$(Configuration);RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=true;IncludeNativeLibrariesForSelfExtract=true;PublishDir=$([System.IO.Path]::GetFullPath('$(PublishDir)'))updater/" />
+    <WriteLinesToFile File="$(PublishDir).techloungeos-install.json" Lines="{&quot;Product&quot;:&quot;TechLoungeOS.Builder&quot;}" Overwrite="true" />
+  </Target>
+  <Import Project="../Personalise/Build.targets"/>
+  <Import Project="../AccountSetup/Build.targets"/>
+  <ItemGroup>
+    <EmbeddedResource Include="../PeBackground/Fonts/manrope-regular.ttf" LogicalName="TechLoungeOS.PeFonts.manrope-regular.ttf"/>
+    <EmbeddedResource Include="../PeBackground/Fonts/manrope-semibold.ttf" LogicalName="TechLoungeOS.PeFonts.manrope-semibold.ttf"/>
+    <EmbeddedResource Include="../PeBackground/Fonts/OFL.txt" LogicalName="TechLoungeOS.PeFonts.OFL.txt"/>
+  </ItemGroup>
+<ItemGroup><EmbeddedResource Include="BootOptimizerWorker.ps1" LogicalName="TechLoungeOS.BootOptimizerWorker.ps1"/><EmbeddedResource Include="OptimizeBootSource.ps1" LogicalName="TechLoungeOS.OptimizeBootSource.ps1"/></ItemGroup><ItemGroup><EmbeddedResource Include="PostAppReadiness.ps1" LogicalName="TechLoungeOS.PostAppReadiness.ps1"/></ItemGroup><ItemGroup><EmbeddedResource Include="DesktopSetupWorker.ps1" LogicalName="TechLoungeOS.DesktopSetupWorker.ps1"/></ItemGroup><ItemGroup><EmbeddedResource Include="PowerDefaults.ps1" LogicalName="TechLoungeOS.PowerDefaults.ps1"/></ItemGroup><ItemGroup><EmbeddedResource Include="WindowsUpdateMigrations.json" LogicalName="TechLoungeOS.WindowsUpdateMigrations.json"/></ItemGroup><ItemGroup><Content Include="Deployment/Wimlib/*" Link="ThirdParty/Wimlib/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup><ItemGroup><Content Include="Deployment/Nvidia/nvidiaProfileInspector.LICENSE.txt" Link="integration/resources/nvidiaProfileInspector.LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup><ItemGroup><EmbeddedResource Include="../FirstLogin/Fonts/OFL.txt" LogicalName="TechLoungeOS.SetupFonts.OFL.txt"/></ItemGroup><ItemGroup><Content Include="../FirstLogin/Fonts/OFL.txt" Link="ThirdParty/Sora/OFL.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" /></ItemGroup></Project>
