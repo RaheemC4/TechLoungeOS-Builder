@@ -36,7 +36,7 @@ public partial class MainWindow : Window
             var source=completed??UsbSource(false);
             if(source is null || (completed is null && Editions.SelectedItem is not Edition)){ShowStep(0);Status.Text="Choose your Windows ISO and edition first.";return;}
             SetBusy(true);
-            var saveTo=OutputMode.SelectedIndex==2?OutputPath.Text:null;
+            var saveTo=OutputModeIndex==2?OutputPath.Text:null;
             if(saveTo is not null && string.IsNullOrWhiteSpace(saveTo)){Status.Text="Choose a filename and location for your saved ISO.";return;}
             if(completed is not null && saveTo is not null && !Path.GetFullPath(saveTo).Equals(Path.GetFullPath(completed),StringComparison.OrdinalIgnoreCase))
             {
@@ -174,12 +174,33 @@ public partial class MainWindow : Window
         if(running || recoveryRequired)return;
         var dialog = new OpenFileDialog { Filter = "Windows ISO|*.iso" };
         if (dialog.ShowDialog() != true) return;
+        await ImportIso(dialog.FileName);
+    }
+    private async void DownloadWindowsIsoClick(object sender,RoutedEventArgs e)
+    {
+        if(running||recoveryRequired)return;
+        IsoDownloadResult? result=null;
+        try
+        {
+            SetBusy(true);var dialog=new MicrosoftIsoWindow{Owner=this};
+            if(dialog.ShowDialog()==true)result=dialog.Downloaded;
+        }
+        catch(Exception ex){Status.Text="Could not open Windows download: "+ex.Message;}
+        finally{SetBusy(false);}
+        if(result is not null)
+        {
+            Write("Microsoft ISO downloaded: "+Path.GetFileName(result.Path)+" · SHA-256 "+result.Sha256+(result.PublishedHashMatched?" · matched Microsoft's published hash":" · calculated; Microsoft did not supply a comparison hash"));
+            await ImportIso(result.Path);
+        }
+    }
+    private async Task ImportIso(string path)
+    {
         SetBusy(true);Status.Text="Reading Windows editions from your ISO…"; EditionHint.Text = "Reading available editions…"; Editions.ItemsSource = null; Editions.IsEnabled = false; IsoPath.Text = ""; IsoFileName.Text = "No ISO selected";
         try
         {
-            var editions = await new BuildEngine(Write).Import(dialog.FileName);
-            IsoPath.Text = dialog.FileName; IsoFileName.Text = Path.GetFileName(dialog.FileName); Editions.ItemsSource = editions; Editions.IsEnabled = editions.Length > 0; EditionHint.Text = "Choose the edition you have a licence for."; Editions.SelectedIndex = 0;
-            SourceProfileStatus.Text = SourcePreservation.Classify(dialog.FileName, editions.Select(e => e.ImageName)).Classification + ". Preservation mode: retain existing components and service configuration.";
+            var editions = await new BuildEngine(Write).Import(path);
+            IsoPath.Text = path; IsoFileName.Text = Path.GetFileName(path); Editions.ItemsSource = editions; Editions.IsEnabled = editions.Length > 0; EditionHint.Text = "Choose the edition you have a licence for."; Editions.SelectedIndex = 0;
+            SourceProfileStatus.Text = SourcePreservation.Classify(path, editions.Select(e => e.ImageName)).Classification + ". Preservation mode: retain existing components and service configuration.";
             Status.Text = $"Found {editions.Length} Windows edition{(editions.Length==1?"":"s")}. Choose one to customise.";
         }
         catch (Exception ex) { EditionHint.Text = "Import an ISO to see its editions."; Status.Text = "Import failed: " + ex.Message; }
@@ -205,7 +226,7 @@ public partial class MainWindow : Window
     {
         if(running || recoveryRequired)return;
         if(currentStep!=4){ShowStep(4);Status.Text="Review your build settings, then choose Build ISO.";return;}
-        if(OutputMode.SelectedIndex!=1){OpenUsbPlan();return;}
+        if(OutputModeIndex!=1){OpenUsbPlan();return;}
         try
         {
             var destination=OutputPath.Text;

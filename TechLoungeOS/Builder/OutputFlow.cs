@@ -5,12 +5,25 @@ namespace TechLoungeOS;
 
 public partial class MainWindow
 {
-    private void OutputModeChanged(object sender,SelectionChangedEventArgs e)=>RefreshOutputChoice();
+    private int OutputModeIndex=>IsoOutputChoice?.IsChecked==true?1:BothOutput?.IsChecked==true?2:0;
+    private void OutputModeChanged(object sender,RoutedEventArgs e)
+    {
+        RefreshOutputChoice();
+        if(sender is RadioButton choice && choice.IsLoaded && SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast)
+            choice.BeginAnimation(OpacityProperty,new System.Windows.Media.Animation.DoubleAnimation(.7,1,TimeSpan.FromMilliseconds(150)){FillBehavior=System.Windows.Media.Animation.FillBehavior.Stop});
+    }
+    private void OutputHoverChanged(object sender,System.Windows.Input.MouseEventArgs e)
+    {
+        if(sender is not RadioButton choice || choice.Template.FindName("Hover",choice) is not Border hover)return;
+        var from=hover.Opacity;var target=choice.IsMouseOver?.045:0;hover.BeginAnimation(OpacityProperty,null);hover.Opacity=target;
+        if(SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast)
+            hover.BeginAnimation(OpacityProperty,new System.Windows.Media.Animation.DoubleAnimation(from,target,TimeSpan.FromMilliseconds(120)){FillBehavior=System.Windows.Media.Animation.FillBehavior.Stop});
+    }
     private void RefreshOutputChoice()
     {
         if(BuildActionLabel is null || IsoDestinationSection is null)return;
-        var isoOnly=OutputMode.SelectedIndex==1;
-        IsoDestinationSection.Visibility=OutputMode.SelectedIndex==0?Visibility.Collapsed:Visibility.Visible;
+        var isoOnly=OutputModeIndex==1;
+        IsoDestinationSection.Visibility=OutputModeIndex==0?Visibility.Collapsed:Visibility.Visible;
         OutputNextHint.Text=isoOnly?"Save a verified ISO at your chosen location.":"Next, choose your USB drive and label. Erasing the drive requires a separate confirmation.";
         BuildActionLabel.Text=isoOnly?"Save ISO":"Choose USB drive";BuildActionIcon.Text=isoOnly?"\uE8A5":"\uE88E";
         System.Windows.Automation.AutomationProperties.SetName(BuildButton,isoOnly?"Save customised ISO":"Create setup USB");

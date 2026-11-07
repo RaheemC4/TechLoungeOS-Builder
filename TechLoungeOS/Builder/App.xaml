@@ -29,6 +29,21 @@
    <Style TargetType="CheckBox" BasedOn="{StaticResource DefaultCheckBoxStyle}"><Setter Property="Margin" Value="0,7"/></Style>
    <Style TargetType="Expander" BasedOn="{StaticResource DefaultExpanderStyle}"><Setter Property="Foreground" Value="{DynamicResource Ink}"/></Style>
    <Style x:Key="Step" TargetType="RadioButton"><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter Property="Margin" Value="0,3"/><Setter Property="Padding" Value="16,10"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Tile" CornerRadius="4" Background="Transparent" BorderBrush="Transparent" BorderThickness="1"><Grid><Border x:Name="Indicator" Width="3" Height="16" CornerRadius="1" Background="{DynamicResource Accent}" HorizontalAlignment="Left" Visibility="Collapsed"/><ContentPresenter Margin="{TemplateBinding Padding}"/></Grid></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Tile" Property="Background" Value="{DynamicResource Tint}"/><Setter TargetName="Indicator" Property="Visibility" Value="Visible"/></Trigger><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource Line}"/></Trigger><Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+   <Style x:Key="OutputOption" TargetType="RadioButton">
+    <Setter Property="Foreground" Value="{DynamicResource Muted}"/><Setter Property="Margin" Value="0,0,8,0"/><Setter Property="Padding" Value="16"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton">
+     <Border x:Name="Tile" Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="8"><Grid>
+      <Border x:Name="Selection" Background="{DynamicResource Tint}" BorderBrush="{DynamicResource Accent}" BorderThickness="1" CornerRadius="8" Opacity="0"/>
+      <Border x:Name="Hover" Background="{DynamicResource Ink}" CornerRadius="8" Opacity="0"/>
+      <ContentPresenter Margin="{TemplateBinding Padding}"/>
+      <TextBlock x:Name="Mark" Text="&#xE73E;" FontFamily="Segoe Fluent Icons" Foreground="{DynamicResource Accent}" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="12" Visibility="Collapsed"/>
+     </Grid></Border><ControlTemplate.Triggers>
+      <Trigger Property="IsChecked" Value="True"><Setter TargetName="Selection" Property="Opacity" Value="1"/><Setter Property="Foreground" Value="{DynamicResource Ink}"/><Setter TargetName="Mark" Property="Visibility" Value="Visible"/></Trigger>
+      <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
+      <Trigger Property="IsPressed" Value="True"><Setter TargetName="Tile" Property="Opacity" Value="0.8"/></Trigger>
+      <Trigger Property="IsEnabled" Value="False"><Setter TargetName="Tile" Property="Opacity" Value="0.5"/></Trigger>
+     </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+   </Style>
    <Style TargetType="GroupBox"><Setter Property="Background" Value="#272727"/><Setter Property="Padding" Value="20"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="GroupBox"><Border Background="{TemplateBinding Background}" BorderBrush="{DynamicResource Line}" BorderThickness="1" CornerRadius="4" Padding="{TemplateBinding Padding}"><StackPanel><TextBlock Text="{TemplateBinding Header}" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,16"/><ContentPresenter/></StackPanel></Border></ControlTemplate></Setter.Value></Setter></Style>
   </ResourceDictionary>
  </Application.Resources>

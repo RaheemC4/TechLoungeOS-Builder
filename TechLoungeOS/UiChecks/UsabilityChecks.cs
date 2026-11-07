@@ -16,6 +16,8 @@ internal static class UsabilityChecks
         {
             var usbEntry=(FrameworkElement?)window.FindName("ExistingIsoUsbEntry");
             var usbButton=(Button?)window.FindName("ExistingIsoUsbButton");
+            var downloadButton=(Button?)window.FindName("DownloadWindowsIsoButton");
+            Require(downloadButton is {IsEnabled:true,Focusable:true},"Microsoft ISO download is a discoverable source action");
             Pump();
             Require(usbEntry?.Visibility==Visibility.Visible && usbButton is {IsEnabled:true,Focusable:true},"A finished ISO has a discoverable USB entry before importing an image");
             foreach(var size in new[]{new Size(720,500),new Size(1280,800)})
@@ -25,8 +27,39 @@ internal static class UsabilityChecks
                 var scroll=(ScrollViewer)window.FindName("SettingsScroll");scroll.ScrollToBottom();Pump();surface.UpdateLayout();
                 var bounds=usbButton!.TransformToAncestor(scroll).TransformBounds(new Rect(new Point(),usbButton.RenderSize));
                 Require(bounds.Height>=30 && bounds.Width>=120 && bounds.Top>=-1 && bounds.Bottom<=scroll.ViewportHeight+1,"Standalone USB action remains fully reachable at "+size);
+                scroll.ScrollToTop();Pump();surface.UpdateLayout();
+                var downloadBounds=downloadButton!.TransformToAncestor(scroll).TransformBounds(new Rect(new Point(),downloadButton.RenderSize));
+                Require(downloadBounds.Height>=30&&downloadBounds.Left>=0&&downloadBounds.Right<=scroll.ViewportWidth+1,"Microsoft download action fits the source page at "+size);
             }
             Snapshot("standalone-usb.png");
+            var downloadWindow=new MicrosoftIsoWindow(false);
+            try
+            {
+                downloadWindow.ShowCatalogue(new("3210",Guid.NewGuid().ToString(),new[]{new IsoLanguage("2","English International"),new IsoLanguage("1","English")}));
+                var language=(ComboBox)downloadWindow.FindName("LanguagesChoice");
+                Require(language.SelectedItem is IsoLanguage{Name:"English International"},"Download dialogue selects UK English before US English");
+                Require(((FrameworkElement)downloadWindow.FindName("RecoveryActions")).Visibility==Visibility.Collapsed,"Successful Microsoft lookup hides website and retry recovery actions");
+                Require(!LogicalTreeHelper.GetChildren((DependencyObject)downloadWindow.Content).OfType<ScrollViewer>().Any(),"The download dialogue has no scrolling container");
+                foreach(var size in new[]{new Size(510,450),new Size(650,480)})
+                {
+                    downloadWindow.Width=size.Width;downloadWindow.Height=size.Height;
+                    var surface=(FrameworkElement)downloadWindow.Content;surface.Measure(size);surface.Arrange(new Rect(size));surface.UpdateLayout();Pump();
+                    var start=(Button)downloadWindow.FindName("DownloadStart");
+                    var bounds=start.TransformToAncestor(surface).TransformBounds(new Rect(new Point(),start.RenderSize));
+                    Require(bounds.Left>=0&&bounds.Right<=surface.ActualWidth+1&&bounds.Bottom<=surface.ActualHeight+1,"Download dialogue footer fits "+size);
+                    var body=(FrameworkElement)downloadWindow.FindName("DownloadBody");
+                    var hint=(FrameworkElement)downloadWindow.FindName("DownloadHint");
+                    var bottom=hint.TransformToAncestor(body).TransformBounds(new Rect(new Point(),hint.RenderSize)).Bottom;
+                    Require(bottom<=body.ActualHeight+1,"Download language, status and licence information fit without scrolling at "+size);
+                }
+                typeof(MicrosoftIsoWindow).GetMethod("ShowRecovery",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(downloadWindow,new object[]{true});
+                ((TextBlock)downloadWindow.FindName("DownloadStatus")).Text="Microsoft’s service is unavailable. Use its website or try again.";
+                downloadWindow.Width=510;downloadWindow.Height=450;
+                var recoverySurface=(FrameworkElement)downloadWindow.Content;recoverySurface.Measure(new Size(510,450));recoverySurface.Arrange(new Rect(0,0,510,450));recoverySurface.UpdateLayout();Pump();
+                var recoveryBody=(FrameworkElement)downloadWindow.FindName("DownloadBody");var actions=(FrameworkElement)downloadWindow.FindName("RecoveryActions");
+                Require(actions.Visibility==Visibility.Visible&&actions.TransformToAncestor(recoveryBody).TransformBounds(new Rect(new Point(),actions.RenderSize)).Bottom<=recoveryBody.ActualHeight+1,"Failure-only recovery actions also fit the minimum download dialogue without scrolling");
+            }
+            finally{downloadWindow.Close();}
             var sourceChoices=(ComboBox)window.FindName("Editions");
             sourceChoices.ItemsSource=new[]{new Edition(1,"Inert UI edition","9","10.0.26200.9457")};sourceChoices.SelectedIndex=0;Pump();
             Require(usbEntry!.Visibility==Visibility.Collapsed,"Imported customisation hides the standalone USB entry instead of duplicating Finish");
@@ -57,11 +90,11 @@ internal static class UsabilityChecks
                 Require(lines.Length==2 && lines[1].Text.Length>40 && choice.IsChecked!=true,"Optional component has inline guidance without selecting removal: "+id);
             }
             Require(window.FindName("UsbButton")==null && window.FindName("ExportUsbButton")==null,"Duplicate sidebar and post-export USB actions remain absent");
-            var output=(ComboBox)window.FindName("OutputMode");
-            Require(output.Items.Count==3 && output.SelectedIndex==0 && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Collapsed,"USB-only defaults to no ISO destination input");
-            output.SelectedIndex=1;Require(((TextBlock)window.FindName("BuildActionLabel")).Text=="Save ISO" && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Visible,"ISO-only exposes the single save destination and action");
-            output.SelectedIndex=2;Require(((TextBlock)window.FindName("BuildActionLabel")).Text=="Choose USB drive","Combined output continues to the USB picker");
-            output.SelectedIndex=0;
+            var outputs=new[]{"UsbOutput","IsoOutputChoice","BothOutput"}.Select(n=>(RadioButton)window.FindName(n)).ToArray();
+            Require(outputs.Length==3 && outputs[0].IsChecked==true && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Collapsed,"USB-only defaults to no ISO destination input");
+            outputs[1].IsChecked=true;Require(outputs[0].IsChecked==false && outputs[2].IsChecked==false,"Output buttons enforce a single selected destination");Require(((TextBlock)window.FindName("BuildActionLabel")).Text=="Save ISO" && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Visible,"ISO-only exposes the single save destination and action");
+            outputs[2].IsChecked=true;Require(((TextBlock)window.FindName("BuildActionLabel")).Text=="Choose USB drive","Combined output continues to the USB picker");
+            outputs[0].IsChecked=true;
             var mode=(ComboBox)window.FindName("WallpaperMode");mode.SelectedIndex=2;
             Require(((FrameworkElement)window.FindName("WallpaperPresetControls")).Visibility==Visibility.Collapsed && ((FrameworkElement)window.FindName("CustomWallpaperControls")).Visibility==Visibility.Collapsed,"Original wallpaper hides irrelevant custom/preset controls");
             mode.SelectedIndex=1;Require(((FrameworkElement)window.FindName("CustomWallpaperControls")).Visibility==Visibility.Visible && ((FrameworkElement)window.FindName("WallpaperPresetControls")).Visibility==Visibility.Collapsed,"Custom mode has one image picker and no preset controls");

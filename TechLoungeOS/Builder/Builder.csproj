@@ -2,10 +2,10 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework>
     <AssemblyName>TechLoungeOS.Builder</AssemblyName>
-    <Version>0.1.35</Version><AssemblyVersion>0.1.35.0</AssemblyVersion><Product>TechLoungeOS Builder</Product>
+    <Version>0.1.36</Version><AssemblyVersion>0.1.36.0</AssemblyVersion><Product>TechLoungeOS Builder</Product>
     <UseWPF>true</UseWPF><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <ApplicationIcon>Assets/TechLoungeOS-Builder.ico</ApplicationIcon>
+    <ApplicationIcon>Assets/TechLoungeOS-Builder-v2.ico</ApplicationIcon>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup><Using Include="System.IO"/><EmbeddedResource Include="WindowsUpgradeRules.json" LogicalName="TechLoungeOS.WindowsUpgradeRules.json"/></ItemGroup>
@@ -19,6 +19,8 @@
   <ItemGroup><EmbeddedResource Include="Deployment/Wimlib/*" Exclude="Deployment/Wimlib/NOTICE.txt" LogicalName="TechLoungeOS.WimPacking.%(Filename)%(Extension)"/></ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Artwork/catalog.json" LogicalName="TechLoungeOS.Builder.Artwork.catalog.json" />
+    <Resource Include="Assets/TechLoungeOS-Builder-v2.ico" />
+    <Resource Include="Assets/TechLoungeOS-Builder-v2.png" />
     <Resource Include="Assets/TechLoungeOS-Builder.ico" />
     <Resource Include="Assets/TechLoungeOS-Builder.png" />
     <Content Include="Artwork/THIRD-PARTY-NOTICES.txt" CopyToOutputDirectory="PreserveNewest" />

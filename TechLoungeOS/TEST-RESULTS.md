@@ -1,3 +1,11 @@
+## 7 November: 0.1.36 download and import improvement
+
+Microsoft's current UK x64 ISO downloaded completely using the production downloader:9,061,271,552bytes, SHA2567E3F373BD3C2321B5D5125DFCF718DFBF1A0ABC50A267118669951890DF98A5D. Microsoft supplied no comparison hash; this is a calculated digest, not a published-hash match. The user confirmed the packaged app listed its editions.
+
+Same-machine elevated import comparison:22.7160455s before,0.9412869s after, all11 edition records identical including edition IDs and revision. Ghost's original six-edition WIM imported in0.8330013s using query-only metadata access. No edition payload is mounted/decompressed for browsing; ISO attachment is released in the existing finally block, and an already-attached source remains attached. Every real build still re-reads metadata and runs the existing servicing/preservation checks. Unknown/malformed/duplicate metadata fails visibly; architecture is retained rather than guessed. Tests cover Unicode, non-contiguous indexes, LTSC IDs, ARM identity, missing fields and DTD rejection.
+
+964 ordinary checks passed. The three icon output buttons passed compiled selection/flow, layout and copy checks; captures are WPF fixtures, not an additional full Windows installation. Final package2889 independently passed its ECDSA envelope, all298 ZIP entries and extracted files; FirstLogin C4 remains unchanged. New native install tests were not repeated for these app-only changes. Earlier physical hardware, antivirus and unsupported-source limits remain.
+
 ## 7 November 18:54 UTC: final virtual USB and both boot modes accepted
 
 The current Ghost ISO is `R:\Ghost-26H2-rc2771.iso`, 12,949,991,424 bytes, SHA256 `7574EFF78731289EAEF307EE501F57C77E3FFDD90806C65C6589FBE785FDD78D`. All 1,116 exported files matched the prepared media before normal read-only dismount. Full boot/ESD preservation evidence covers 222,620 installation-image entries and 36,856 hardlink groups, with only three owned installation payloads and two owned WinPE answer templates changed.

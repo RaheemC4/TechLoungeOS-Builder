@@ -1,3 +1,13 @@
+## 0.1.36
+
+Download Windows 11 x64 directly from Microsoft with UK English first, a compact scroll-free dialogue, progress, cancellation and safe save handling. Successful lookup hides website/retry recovery actions. Downloads retain existing ISOs, validate size/format and calculate SHA-256; a Microsoft comparison hash is verified when supplied.
+
+ISO import now reads the Windows image metadata directory once instead of reopening every edition. The measured 11-edition Microsoft image improved from22.72s to0.94s with identical edition metadata; the six-edition Ghost image loaded in0.83s. Results depend on storage and source media. Build-time reinspection and preservation gates remain intact.
+
+Replaced the output dropdown with three icon buttons: Setup USB, Save ISO, USB+ISO. Selection is highlighted with a checkmark; other choices remain clickable with muted styling, hover feedback and keyboard focus. Reduced motion and high contrast are respected. New approved app icon and updated25second product video.
+
+964 ordinary automated checks, compiled WPF usability/layout/copy checks and the signed298file package passed. A full9,061,271,552byte Microsoft UK ISO download completed; the user confirmed its editions appear in the packaged app. Main executable remains Authenticode unsigned; update-envelope signing is separate. No new Windows installation was required for this app-only release.
+
 ## 0.1.35
 
 Restored a single opening-screen action for copying an already-finished ISO to USB, without rebuilding it. It hides after selecting an edition, keeping customisation in Finish. Existing erase confirmation and file verification remain unchanged. The native-validated Windows enablement route is now described as reviewed; unknown future routes remain blocked.

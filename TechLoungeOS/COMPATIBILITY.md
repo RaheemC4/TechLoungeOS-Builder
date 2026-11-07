@@ -1,3 +1,11 @@
+## 7 November: 0.1.36 download and import improvement
+
+Microsoft's current UK x64 ISO downloaded completely using the production downloader:9,061,271,552bytes, SHA2567E3F373BD3C2321B5D5125DFCF718DFBF1A0ABC50A267118669951890DF98A5D. Microsoft supplied no comparison hash; this is a calculated digest, not a published-hash match. The user confirmed the packaged app listed its editions.
+
+Same-machine elevated import comparison:22.7160455s before,0.9412869s after, all11 edition records identical including edition IDs and revision. Ghost's original six-edition WIM imported in0.8330013s using query-only metadata access. No edition payload is mounted/decompressed for browsing; ISO attachment is released in the existing finally block, and an already-attached source remains attached. Every real build still re-reads metadata and runs the existing servicing/preservation checks. Unknown/malformed/duplicate metadata fails visibly; architecture is retained rather than guessed. Tests cover Unicode, non-contiguous indexes, LTSC IDs, ARM identity, missing fields and DTD rejection.
+
+964 ordinary checks passed. The three icon output buttons passed compiled selection/flow, layout and copy checks; captures are WPF fixtures, not an additional full Windows installation. Final package2889 independently passed its ECDSA envelope, all298 ZIP entries and extracted files; FirstLogin C4 remains unchanged. New native install tests were not repeated for these app-only changes. Earlier physical hardware, antivirus and unsupported-source limits remain.
+
 ## Current acceptance boundary, 7 November 2026
 
 The private app is 0.1.35. Its 298-file package passed independent signature, archive and extraction checks. Compiled WPF layout/copy/usability and output-flow checks passed, including the restored existing-ISO USB entry. Version .35 changes only version identity and reviewed-upgrade wording after the native .34 USB UI checks. Unchanged servicing/provisioning code passed 933 ordinary checks and 25 personalisation checks. FirstLogin C4 and Personalise88 are unchanged from the accepted payload refresh; C4 retains its native Defender scan result. Source-generated WinPE account templates retain Windows Setup's key/skip screen when no source ProductKey exists; inherited keys, display policy and edition selection remain unchanged.

@@ -10,7 +10,7 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
     public async Task<Edition[]> Import(string iso)
     {
         if (!File.Exists(iso)) throw new FileNotFoundException("ISO not found.", iso);
-        var json = await runner.PowerShell($$"""
+        var xml = await runner.PowerShell($$"""
             $iso = {{Q(Path.GetFullPath(iso))}}
             $disk = Get-DiskImage -ImagePath $iso
             $owned = !$disk.Attached
@@ -21,14 +21,10 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
               $root = "$($volume.DriveLetter):\"
               $image = @('sources\install.wim','sources\install.esd') | ForEach-Object { Join-Path $root $_ } | Where-Object { Test-Path $_ } | Select-Object -First 1
               if (!$image) { throw 'No install.wim/install.esd. Split SWM and nonstandard media are not supported yet.' }
-              $items = @(Get-WindowsImage -ImagePath $image | ForEach-Object {
-                $detail = Get-WindowsImage -ImagePath $image -Index $_.ImageIndex
-                [pscustomobject]@{ ImageIndex = [int]$_.ImageIndex; ImageName = [string]$_.ImageName; Architecture = [string]([int]$detail.Architecture); Version = [string]$detail.Version; EditionId = [string]$detail.EditionId }
-              })
-              ConvertTo-Json -InputObject $items -Compress
+              {{ImageMetadata.QueryScript}}
             } finally { if ($owned) { Dismount-DiskImage -ImagePath $iso | Out-Null } }
             """);
-        return JsonSerializer.Deserialize<Edition[]>(json.Trim()) ?? throw new IOException("No editions found.");
+        return ImageMetadata.Parse(xml.Trim());
     }
 
     public async Task Build(BuildOptions options, CancellationToken ct)

@@ -1,6 +1,13 @@
 using TechLoungeOS;
+if(args is ["--microsoft-iso-checks"])
+{
+    var fixture=Path.Combine(Path.GetTempPath(),"TLOS-microsoft-iso-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(fixture);
+    try{await MicrosoftIsoChecks.Run(fixture,(ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);Console.WriteLine("PASS: "+name);});}
+    finally{Directory.Delete(fixture,true);}return;
+}
 
 var count = 0;
+ImageMetadataChecks.Run((ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);count++;Console.WriteLine("PASS: "+name);});
 if(args is ["--restart-notice-checks"])
 {
     var parent=Path.GetFullPath(Path.GetTempPath());
@@ -538,6 +545,7 @@ try
     var status = await runner.PowerShell("[pscustomobject]@{ answer = 42 } | ConvertTo-Json -Compress");
     Check(status.Trim() == "{\"answer\":42}", "real process output captured");
     await ProcessOutputChecks.Run(root,Check);
+    await MicrosoftIsoChecks.Run(root,Check);
     try { await runner.PowerShell("throw 'Synthetic servicing error'"); throw new Exception("Expected PowerShell failure"); }
     catch (IOException ex) { Check(ex.Message.Contains("Synthetic servicing error") && !ex.Message.Contains("#< CLIXML"), "PowerShell failures are readable without encoded error markup"); }
     var drained = Path.Combine(root, "drained.txt");

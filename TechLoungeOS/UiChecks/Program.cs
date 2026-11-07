@@ -14,6 +14,14 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if(args is ["--release-video-frames",var videoOutputWithImage,var liveCatalogueWithImage,var importedFile])
+        {
+            var videoApp=new App(false);videoApp.InitializeComponent();ReleaseVideoFrames.Run(videoOutputWithImage,liveCatalogueWithImage,importedFile);videoApp.Shutdown();return;
+        }
+        if(args is ["--release-video-frames",var videoOutput,var liveCatalogue])
+        {
+            var videoApp=new App(false);videoApp.InitializeComponent();ReleaseVideoFrames.Run(videoOutput,liveCatalogue);videoApp.Shutdown();return;
+        }
         if(args is ["--app-search-native",var nativeSearchFolder])
         {
             var nativeSearchApp=new App(false);nativeSearchApp.InitializeComponent();AppSuggestionChecks.RunNative(nativeSearchFolder);nativeSearchApp.Shutdown();return;

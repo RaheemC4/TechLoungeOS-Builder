@@ -2,16 +2,16 @@
 
 Build a Windows 11 installer with your apps, desktop and setup preferences already chosen.
 
-[![Watch the 22-second preview](docs/preview.png)](docs/preview.mp4)
+[![Watch the 25-second preview](docs/preview.png)](docs/preview.mp4)
 
-- Import an ISO, choose its edition and customise optional components.
+- Download Windows 11 from Microsoft or import an ISO, then choose an edition and components.
 - Search for apps or select the recommended set, including Discord, Stremio, Proton VPN and HWiNFO64.
 - Create a local account and device name in the redesigned WinPE setup.
 - Include Microsoft 365, runtimes, Store/Xbox and TechLoungeTweaks integration.
 - Reach the desktop first, then finish installs quietly with progress and retry controls.
 - Run the Boot Optimizer after selected apps finish installing.
 - Choose OLED-friendly wallpapers, colours and desktop defaults.
-- Export a bootable ISO or create a verified setup USB.
+- Choose setup USB, saved ISO, or both with clear output buttons.
 - Apply supported Windows updates with checks for retained components and settings.
 - Check for signed Builder updates automatically, with installation after the app closes.
 
@@ -21,6 +21,8 @@ Requires Windows 11 x64, administrator permission, local NTFS working space and 
 
 Office uses the normal Microsoft deployment tools and your own account or licence. Activation tools are not included.
 
-**Unreleased:** Ghost and standard-image servicing/install checks have passed for their recorded media, including selected apps, Office, TechLoungeTweaks and ordinary recovery. Candidate 0.1.35 and the refreshed Ghost ISO passed package and full media checks. The current 16 GB virtual USB passed writing, file verification, BIOS boot and UEFI Secure Boot with TPM 2.0. Public hosting and live hosted-update verification await publishing approval. Physical hardware and unreviewed Windows upgrade routes are not certified. See [test results](TechLoungeOS/TEST-RESULTS.md) and [compatibility](TechLoungeOS/COMPATIBILITY.md). The video uses edited app and VM captures.
+[Download the Windows x64 app](https://github.com/RaheemC4/TechLoungeOS-Builder/releases/latest). Extract the complete ZIP and open TechLoungeOS.Builder.exe.
+
+Ghost and standard-image servicing/install checks passed for their recorded media, including selected apps, Office, TechLoungeTweaks and ordinary recovery. The current Ghost media passed full file verification and 16 GB virtual USB writing, BIOS boot and UEFI Secure Boot with TPM 2.0. Physical hardware, arbitrary modified images and unknown Windows upgrade routes are not certified. See [test results](TechLoungeOS/TEST-RESULTS.md) and [compatibility](TechLoungeOS/COMPATIBILITY.md). The video uses edited app controls and VM captures.
 
 [Build and technical documentation](TechLoungeOS/README.md)

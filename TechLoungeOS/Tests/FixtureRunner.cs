@@ -17,6 +17,7 @@ sealed class FixtureRunner(string workspace, bool failRemoval = false, bool fail
         }
         if(script.StartsWith("# TechLoungeOS mandatory SMB1 source check"))return Task.FromResult("Disabled");
         if(script.StartsWith("[string](Get-WindowsImage -ImagePath ")&&script.Contains("packed-install.esd"))return Task.FromResult("10.0.26200.1");
+        if (script.Contains("TlosWimMetadata")) return Task.FromResult("<WIM><IMAGE INDEX='2'><NAME>Windows 11 Pro</NAME><WINDOWS><ARCH>9</ARCH><EDITIONID>Professional</EDITIONID><VERSION><MAJOR>10</MAJOR><MINOR>0</MINOR><BUILD>26200</BUILD><SPBUILD>1</SPBUILD></VERSION></WINDOWS></IMAGE></WIM>");
         if (script.Contains("Get-WindowsImage -ImagePath")) return Task.FromResult("""[{"ImageIndex":2,"ImageName":"Windows 11 Pro","Architecture":"9","Version":"10.0.26200.1"}]""");
         if (script.Contains("robocopy.exe"))
         {
