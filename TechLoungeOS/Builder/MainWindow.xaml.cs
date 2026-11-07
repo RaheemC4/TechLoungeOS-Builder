@@ -71,7 +71,7 @@ public partial class MainWindow : Window
         }
         SetupKeyboardChoice.SelectedIndex=0;
         Closing+=ApplyUpdateOnClose; Closed+=(_,_)=>{updateLifetime.Cancel();updateLifetime.Dispose();};
-        Loaded+=async (_,_)=>{CheckRecoveryState();if(automaticUpdates)await CheckUpdates();};
+        Loaded+=async (_,_)=>{CheckRecoveryState();if(automaticUpdates)await Task.WhenAll(CheckUpdates(),PrepareBuildComponent());};
         ShowRecommendations();
         var area = SystemParameters.WorkArea;
         if (area.Width > 0 && area.Height > 0)
@@ -79,9 +79,6 @@ public partial class MainWindow : Window
             Width = Math.Min(Width, area.Width); Height = Math.Min(Height, area.Height);
             MinWidth = Math.Min(MinWidth, Width); MinHeight = Math.Min(MinHeight, Height);
         }
-        OscdimgPath.Text = @"C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\Deployment Tools\amd64\Oscdimg\oscdimg.exe";
-        var includedIsoTool=Path.Combine(AppContext.BaseDirectory,"support","oscdimg.exe");
-        if(File.Exists(includedIsoTool)){OscdimgPath.Text=includedIsoTool;IsoToolSettings.Visibility=Visibility.Collapsed;}
         foreach (var c in Policy.RemovableApps.Select(n => new Component("Appx", n)).Concat(Policy.RemovableFeatures.Select(n => new Component("Feature", n))))
         {
             var content=new StackPanel();
@@ -159,6 +156,7 @@ public partial class MainWindow : Window
     {
         SetActivityPower(value);
         running = value;
+        if(value){AppPickerPopup.IsOpen=false;appSearchRevision++;appSearch?.Cancel();}
         var available=!value && !recoveryRequired;
         Inputs.IsEnabled=available; Navigation.IsEnabled=available;
         PreviousStepButton.IsEnabled=available;
@@ -206,17 +204,18 @@ public partial class MainWindow : Window
         catch (Exception ex) { EditionHint.Text = "Import an ISO to see its editions."; Status.Text = "Import failed: " + ex.Message; }
         finally { SetBusy(false); }
     }
+    private async Task PrepareBuildComponent()
+    {
+        try{await Task.Run(()=>IsoTool.Ensure(null,updateLifetime.Token));}
+        catch(OperationCanceledException) when(updateLifetime.IsCancellationRequested){}
+        catch(Exception error){Write("Required Microsoft build component will be retried at build time: "+error);}
+    }
     private void PresetClick(object sender, RoutedEventArgs e)
     {
         foreach (CheckBox c in Components.Children) c.IsChecked = ((Component)c.Tag).Kind == "Appx";
     }
     private void KeepClick(object sender, RoutedEventArgs e) { foreach (CheckBox c in Components.Children) c.IsChecked = false; }
     private static string BundledTweaksFolder=>Path.Combine(AppContext.BaseDirectory,"integration");
-    private void ToolClick(object sender, RoutedEventArgs e)
-    {
-        var dialog = new OpenFileDialog { Filter = "Microsoft ADK ISO tool|oscdimg.exe" };
-        if (dialog.ShowDialog() == true) OscdimgPath.Text = dialog.FileName;
-    }
     private void OutputClick(object sender, RoutedEventArgs e)
     {
         var dialog = new SaveFileDialog { Filter = "Windows ISO|*.iso", FileName = "TechLoungeOS.iso",OverwritePrompt=false };
@@ -230,12 +229,12 @@ public partial class MainWindow : Window
         try
         {
             var destination=OutputPath.Text;
-            var options=ReadBuildOptions(IsoOutput.StagingPath(destination));Policy.Validate(options);
+            var options=ReadBuildOptions(IsoOutput.StagingPath(destination));Policy.Validate(options,requireIsoTool:false);
             var replace=File.Exists(destination)?"\n\nThis will replace the existing ISO after the new image passes verification.":"";
             if(MessageBox.Show(this,$"Build a customised ISO?\n\nOptional components to remove: {options.Remove.Length}\nOptional apps selected: {options.Apps.Length}\n\nSave to: {destination}{replace}","Review build",MessageBoxButton.OKCancel,MessageBoxImage.Information)!=MessageBoxResult.OK)return;
             await BuildOutput(options,destination,CancellationToken.None);
         }
-        catch(Exception ex){Status.Text="Could not finish the ISO: "+ex.Message;Write(ex.ToString());}
+        catch(Exception ex){ShowBuildError(ex);}
     }
     private Task<bool> RunBuild(BuildOptions options)=>RunBuildCore(options,CancellationToken.None);
     private async Task<bool> RunBuildCore(BuildOptions options,CancellationToken external,IProgress<string>? secondary=null)
@@ -245,7 +244,8 @@ public partial class MainWindow : Window
         var progress = new Progress<string>(phase=>{ShowBuildPhase(phase);secondary?.Report(Status.Text);});
         try
         {
-            await Task.Run(() => new BuildEngine(Write, progress: progress).Build(options, cancellation.Token));
+            void Observe(string line){Write(line);if(secondary is MeasuredBuildProgress measured)measured.ObserveOutput(line);}
+            await Task.Run(() => new BuildEngine(Observe, progress: progress).Build(options, cancellation.Token));
             Status.Text = "ISO exported. VM installation validation is still required.";
             ShowExportReady(options.Output);success=true;
         }
@@ -253,6 +253,11 @@ public partial class MainWindow : Window
         catch (Exception ex) { Status.Text = "Build failed: " + ex.Message; Write(ex.ToString()); }
         finally { cancellation.Dispose(); cancellation = null; SetBusy(false); }
         return success;
+    }
+    private void ShowBuildError(Exception error)
+    {
+        Status.Text="Build failed: "+error.Message;Write(error.ToString());
+        MessageBox.Show(this,"Your ISO was not created.\n\n"+error.Message+"\n\nCheck the diagnostic log for details and any recovery copy.","Build could not finish",MessageBoxButton.OK,MessageBoxImage.Error);
     }
     private void ShowBuildPhase(string phase)
     {

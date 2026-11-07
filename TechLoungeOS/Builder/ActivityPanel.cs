@@ -38,11 +38,6 @@ public partial class MainWindow
     }
     private void ActivityExpanded(object sender,RoutedEventArgs e)=>Dispatcher.BeginInvoke(
         System.Windows.Threading.DispatcherPriority.Loaded,new Action(ActivityScroll.ScrollToTop));
-    private void ActivityRowLoaded(object sender,RoutedEventArgs e)
-    {
-        if(sender is FrameworkElement row && row.IsVisible && SystemParameters.ClientAreaAnimation && !SystemParameters.HighContrast)
-            row.BeginAnimation(OpacityProperty,new DoubleAnimation(0,1,TimeSpan.FromMilliseconds(140)){FillBehavior=FillBehavior.Stop});
-    }
     private void OpenDiagnosticLog(object sender,RoutedEventArgs e)
     {
         if(diagnosticWindow is not null){diagnosticWindow.Activate();return;}

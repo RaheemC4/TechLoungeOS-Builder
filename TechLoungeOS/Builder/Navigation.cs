@@ -21,6 +21,7 @@ public partial class MainWindow
         var descriptions = new[] { "Choose a Windows 11 ISO to customise.", "Remove optional extras while keeping the essentials protected.", "Choose optional apps to finish installing quietly after your desktop opens.", "Choose your wallpaper, region and keyboard.", "Choose a setup USB, a saved ISO, or both." };
         if (index < 0 || index >= pages.Length) throw new ArgumentOutOfRangeException(nameof(index));
         currentStep=index;
+        if(index!=2 && AppPickerPopup is not null)AppPickerPopup.IsOpen=false;
         for (var i = 0; i < pages.Length; i++) pages[i].Visibility = i == index ? Visibility.Visible : Visibility.Collapsed;
         ((RadioButton)Navigation.Children[index]).IsChecked = true;
         StepTitle.Text = titles[index]; StepDescription.Text = descriptions[index]; SettingsScroll.ScrollToTop();

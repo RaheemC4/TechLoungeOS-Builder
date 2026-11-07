@@ -41,7 +41,7 @@ public static class Policy
         _ => false
     };
     public static string Ps(string value) => "'" + value.Replace("'", "''") + "'";
-    public static void Validate(BuildOptions o)
+    public static void Validate(BuildOptions o,bool requireIsoTool=true)
     {
         SetupRegional.ValidateSelections(o);
         Wallpaper.Validate(o.WallpaperFile);
@@ -82,8 +82,8 @@ public static class Policy
             throw new InvalidOperationException("Select an existing Windows ISO.");
         if (o.Index < 1 || o.Remove.Any(c => !CanRemove(c)) || !ValidApps(o.Apps))
             throw new InvalidOperationException("The build contains an unsupported edition, component or app.");
-        if (!File.Exists(o.Oscdimg) || !Path.GetFileName(o.Oscdimg).Equals("oscdimg.exe", StringComparison.OrdinalIgnoreCase))
-            throw new InvalidOperationException("Select oscdimg.exe from the Microsoft Windows ADK.");
+        if (requireIsoTool && (!File.Exists(o.Oscdimg) || !Path.GetFileName(o.Oscdimg).Equals("oscdimg.exe", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidOperationException("A required Microsoft build component is unavailable. Check your connection and try again; Builder prepares it automatically.");
         if (!o.Output.EndsWith(".iso", StringComparison.OrdinalIgnoreCase) || File.Exists(o.Output))
             throw new InvalidOperationException("Choose a new output ISO filename. Existing files are never overwritten.");
         var workspace = Path.GetFullPath(o.Workspace).TrimEnd(Path.DirectorySeparatorChar);

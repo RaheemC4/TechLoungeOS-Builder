@@ -1,3 +1,34 @@
+## 0.1.41 - USB build fixes and clear progress
+
+Includes the privately validated0.1.38/0.1.39 fixes below: automatic verified build tooling and the Ghost WinPE metadata-commit repair.
+
+- Simplified Recommended button: one selected outline and subtle fill, with no extra tick box or outer focus rectangle.
+- Compact USB window with one activity scrollbar, smoothly arriving cards, a clearly highlighted active task, seven build/USB milestones (three for existing media), friendly current-task detail and elapsed time.
+- Worker-reported measurements feed current-operation estimates. Unknown or stale estimates are omitted; only elapsed time remains. No invented overall completion time. Windows reduced-motion/high-contrast settings are respected.
+- Use native DISM for the offline legacy-network client check. The exact saved Ghost image passed the query in a normal Explorer-launched servicing session, then was discarded with an unchanged source checksum.
+- Keep preparation/downloads before the copy milestone in the step counter.
+- Preserved original media, tool resources, disk identity checks, explicit USB erase confirmation, recovery diagnostics and the accepted first-login helper.
+
+982 ordinary checks plus 13 final focused timing checks passed. Exact WinPE metadata repair, native SMB source query, the signed 298-file package and compiled activity controls were checked separately. No new full Windows installation or physical USB write was performed for this patch. Earlier installation and virtual USB evidence remains scoped to its recorded images.
+
+
+## 0.1.39 (private validation) - WinPE build fix and clear live progress
+
+- Preserve the original WinPE OS description when Windows servicing drops it during commit. Keep the strict x64/WindowsPE and boot-index checks, updated file statistics and existing file-resource preservation. Fix verified against the exact staged Ghost image that failed.
+- Compact USB layout with one activity scrollbar. The active task is highlighted and animated; new rows expand, slide and fade smoothly. Reduced-motion and high-contrast settings are respected.
+- Seven clear customise-to-USB milestones (three for an already-built ISO), friendly current-task detail, elapsed time and a current-step estimate only when a tool reports measurable progress. Old/queued messages cannot overwrite a failure.
+- Includes the private0.1.38 usability fixes below, including automatic verified Microsoft build-tool preparation and the corrected Recommended selection highlight.
+
+
+## 0.1.38 (private validation) - simpler app selection and automatic build tools
+
+- One selected-app list with a compact Add apps/search picker. Recommended apps toggle on or off while preserving other choices. Mandatory inclusions remain automatic.
+- Microsoft ISO tooling is prepared and checksum-verified inside the app. No ADK path or separate setup is presented. First preparation needs internet.
+- USB drives show their name, capacity and drive letters; internal identity and erase checks are retained.
+- Persistent USB result banner, immediate failure alert and clear retry action. Friendly activity replaces raw device output; diagnostics can be saved separately.
+- Fixes the reported missing-tool failure before USB erasure. No automated test wrote to a physical drive.
+
+
 ## 0.1.37
 
 Shiftd is now a required inclusion, like HatchZip. Every new customised ISO or customise-to-USB build adds its verified offline installer and silent first-login recipe even when the optional app list is empty. It is removed from optional browsing and search selection, cannot be deselected, and is deduplicated if an older selection already contains it. Boot Optimizer waits for Shiftd's completion receipt with the other apps.

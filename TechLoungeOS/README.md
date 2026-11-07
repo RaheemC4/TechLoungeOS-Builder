@@ -6,7 +6,7 @@ Create a customised Windows 11 x64 ISO or a bootable setup USB. This is a separa
 
 ## Requirements
 
-Use Windows 11 x64 with administrator permission, local NTFS working space and Microsoft's ADK Deployment Tools (`oscdimg.exe`). Extract the complete Builder package, including its integration folder. A self-contained package includes the Builder runtime; the development build needs the .NET 10 Desktop Runtime. Required downloads and selected online apps need internet access. Free-space checks run before servicing or USB erasure; actual requirements depend on the source and selected output.
+Use Windows 11 x64 with administrator permission and local NTFS working space. The Builder automatically downloads, verifies and protects the small Microsoft ISO creation component on first use; no separate ADK setup or executable selection is required. Keep the PC online for this initial preparation. Cached verified tooling is reused. Extract the complete Builder package, including its integration folder. A self-contained package includes the Builder runtime; the development build needs the .NET 10 Desktop Runtime. Required downloads and selected online apps need internet access. Free-space checks run before servicing or USB erasure; actual requirements depend on the source and selected output.
 
 ## Create your installer
 

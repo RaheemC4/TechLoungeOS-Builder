@@ -8,7 +8,7 @@ public record UsbDisk(int Number, string UniqueId, string SerialNumber, string P
     long Size, int BusType, int LogicalSectorSize, bool IsBoot, bool IsSystem, bool IsOffline, bool IsReadOnly,
     bool Protected, string[] Volumes)
 {
-    public string Label => $"{FriendlyName} · {Size / 1_000_000_000d:F1} GB · Disk {Number} · {SerialNumber}";
+    public string Label => $"{FriendlyName} · {Size / 1_000_000_000d:F1} GB"+(Volumes.Length==0?"":" · "+string.Join(", ",Volumes.Select(v=>v.TrimEnd(':')+":")));
 }
 public record MediaFile(string RelativePath, long Length, string Sha256);
 public record PreparedUsb(string Workspace, string Iso, string IsoSha256, MediaFile[] Files, long Bytes);

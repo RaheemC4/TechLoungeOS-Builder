@@ -108,6 +108,7 @@ public static class WinPeBackground
             File.WriteAllText(Path.Combine(work,"pe-preservation.json"),JsonSerializer.Serialize(new{before,after,added,changed=before.ContainsKey(shell)?new[]{shell}:Array.Empty<string>()},new JsonSerializerOptions{WriteIndented=true}));
             log("WinPE file preservation verified. Saving the background changes.");
             ct.ThrowIfCancellationRequested();await run.Dism("/Unmount-Image","/MountDir:"+mount,"/Commit","/CheckIntegrity");mounted=false;
+            WinPeImage.PreserveWindowsMetadata(source,candidate);
             if(WinPeImage.ReadBootIndex(candidate)!=bootIndex)throw new IOException("The saved Windows PE image changed its boot selection. The source boot image was kept.");
             File.Copy(source,Path.Combine(work,"source-boot.wim"),false);
             File.SetAttributes(source,File.GetAttributes(source)&~FileAttributes.ReadOnly);File.Move(candidate,source,true);

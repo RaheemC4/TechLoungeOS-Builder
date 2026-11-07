@@ -45,6 +45,11 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
             throw new InvalidOperationException("The setup wizard, gaming defaults, hardware-matched graphics queues and current Tweaks integration are required in every app-created ISO.");
         if (runnerFactory == null && string.IsNullOrWhiteSpace(options.TweaksFolder))
             throw new InvalidOperationException("TechLoungeTweaks integration is required. Extract the complete Builder package or choose its support folder.");
+        if(runnerFactory is null)
+        {
+            progress?.Report("Preparing the required Microsoft build component");
+            options=options with{Oscdimg=await IsoTool.Ensure(options.Oscdimg,ct)};
+        }
         Policy.Validate(options);
         if(runnerFactory is null)Preflight.ValidatePackage();
         if (options.TweaksFolder != null)

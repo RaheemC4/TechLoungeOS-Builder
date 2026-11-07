@@ -7,9 +7,9 @@ static class LegacyNetworkChecks
     {
         var mount=Path.Combine(root,"legacy-mandatory");var step=LegacyNetwork.Stage(mount);
         check(File.ReadAllText(Path.Combine(mount,@"ProgramData\TechLoungeOS\legacy-network.ps1")).StartsWith("$guest=$true;$smb1=$true;$client=$true;$server=$true"),"every generated ISO stages all mandatory SMB compatibility settings without selectable flags");
-        foreach(var value in new[]{"Enabled","Disabled","EnablePending","DisabledWithPayloadRemoved","Unknown",""}) {
+        foreach(var value in new[]{"Enabled","Disabled","EnablePending","Enable Pending","Disabled with Payload Removed","DisabledWithPayloadRemoved","Unknown",""}) {
             var accepted=true;try{await LegacyNetwork.ValidateSource(new Source(value),mount);}catch(IOException){accepted=false;}
-            check(accepted==(value is "Enabled" or "Disabled" or "EnablePending"),"mandatory SMB1 source preflight accepts only retained payload states: "+value);
+            check(accepted==(value is "Enabled" or "Disabled" or "EnablePending" or "Enable Pending"),"mandatory SMB1 source preflight accepts only retained payload states: "+value);
         }
         foreach(var scenario in new[]{"guest","client","server","smb1","missing","policy","all"}) {
             var folder=Path.Combine(root,"legacy-"+scenario);Directory.CreateDirectory(folder);
@@ -53,7 +53,7 @@ static class LegacyNetworkChecks
     }
     private sealed class Source(string value):ICommandRunner {
         public Task<string> Run(string exe,IEnumerable<string> args,CancellationToken ct=default)=>throw new Exception("No target execution in preflight");
-        public Task<string> PowerShell(string script,CancellationToken ct=default){if(!script.Contains("-Path ")||script.Contains("-Online"))throw new Exception("Expected offline read-only source check");return Task.FromResult(value);}
-        public Task<string> Dism(params string[] args)=>throw new Exception("No servicing in preflight");
+        public Task<string> PowerShell(string script,CancellationToken ct=default)=>throw new Exception("The offline check must use native DISM, not the failing PowerShell API");
+        public Task<string> Dism(params string[] args){if(!args.Any(a=>a.StartsWith("/Image:"))||!args.Contains("/Get-FeatureInfo")||!args.Contains("/FeatureName:SMB1Protocol-Client")||args.Any(a=>a.StartsWith("/Enable")))throw new Exception("Expected only native read-only source inventory");return Task.FromResult("Feature Name : SMB1Protocol-Client\r\nState : "+value+"\r\nThe operation completed successfully.");}
     }
 }

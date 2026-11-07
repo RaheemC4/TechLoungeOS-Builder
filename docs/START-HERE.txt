@@ -1,9 +1,10 @@
-TechLoungeOS Builder 0.1.37
+TechLoungeOS Builder 0.1.40
 
 Extract the whole package and open TechLoungeOS.Builder.exe. Keep its support
 folders beside it. The Builder needs Windows 11 x64, administrator permission
-and local NTFS working space. ISO export needs the Windows ADK Deployment Tools
-(oscdimg.exe); the app uses the standard installed location or a tool you locate.
+and local NTFS working space. Required build components are prepared and verified
+automatically inside the app. Keep the PC online for first-time preparation;
+there is no separate ADK installation or tool-path selection.
 
 1. Windows image: download an x64 ISO directly from Microsoft, or browse for one
    you already have. Choose your edition. Windows-version updates are here.

@@ -42,7 +42,7 @@ public partial class MainWindow
         if(WallpaperMode.SelectedIndex==1 && string.IsNullOrWhiteSpace(WallpaperPath.Text))throw new IOException("Choose a background image, a preset, or Keep source background.");
         if(!Directory.Exists(BundledTweaksFolder))throw new IOException("Required support files are missing. Keep the complete Builder folder together, including its integration folder.");
         var work=WorkspaceStorage.NewPath("build",checked(new FileInfo(IsoPath.Text).Length*5+(40L<<30)+(UpdateWindowsImage.IsChecked==true?40L<<30:0)),excludedVolumes);
-        return new(IsoPath.Text,edition.ImageIndex,work,output,OscdimgPath.Text,
+        return new(IsoPath.Text,edition.ImageIndex,work,output,IsoTool.CachePath,
             Components.Children.Cast<CheckBox>().Where(c=>c.IsChecked==true).Select(c=>(Component)c.Tag).ToArray(),selectedApps.Select(a=>a.Id).ToArray(),true,true,BundledTweaksFolder)
         {
             WallpaperFile=WallpaperMode.SelectedIndex==1?WallpaperPath.Text:null,

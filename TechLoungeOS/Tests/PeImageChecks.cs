@@ -10,6 +10,14 @@ internal static class PeImageChecks
         check(WinPeImage.SelectBootIndex(1, 1, 1, 1, single) == 1, "a one-image Windows PE WIM selects its marked first image");
         check(WinPeImage.SelectBootIndex(2, 2, 1, 1, dual) == 2, "standard two-image media selects its marked setup image");
         check(WinPeImage.SelectBootIndex(2, 1, 1, 1, dual) == 1, "an explicitly marked first image is not replaced by an assumed index 2");
+        var saved=dual.Replace("<IMAGE INDEX='2'>","<IMAGE INDEX='2'><FILECOUNT>12345</FILECOUNT>");
+        var start=saved.LastIndexOf("<WINDOWS>",StringComparison.Ordinal);var stop=saved.IndexOf("</WINDOWS>",start,StringComparison.Ordinal)+10;
+        saved=saved[..start]+"<WINDOWS><ARCH>9</ARCH></WINDOWS>"+saved[stop..];
+        var retainedXml=WinPeImage.RetainWindowsMetadata(2,2,dual,saved);
+        check(WinPeImage.SelectBootIndex(2,2,1,1,retainedXml)==2 && retainedXml.Contains("<FILECOUNT>12345</FILECOUNT>"),"Retaining the original PE description preserves the saved file count and boot index");
+        check(System.Xml.Linq.XNode.DeepEquals(System.Xml.Linq.XElement.Parse(retainedXml).Elements("IMAGE").First(),System.Xml.Linq.XElement.Parse(dual).Elements("IMAGE").First()),"Non-boot image metadata is retained unchanged");
+        try{WinPeImage.RetainWindowsMetadata(2,2,dual,saved.Replace("<ARCH>9</ARCH></WINDOWS>","<ARCH>12</ARCH></WINDOWS>"));throw new Exception("Changed architecture accepted");}
+        catch(IOException){check(true,"Metadata retention never relabels a changed ARM image as x64 PE");}
         void Reject(uint count, uint index, ushort part, ushort parts, string xml, string name)
         {
             try { WinPeImage.SelectBootIndex(count, index, part, parts, xml); throw new Exception("Invalid boot metadata accepted"); }

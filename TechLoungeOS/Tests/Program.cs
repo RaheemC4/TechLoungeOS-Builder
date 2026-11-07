@@ -1,4 +1,8 @@
 using TechLoungeOS;
+if(args is ["--work-progress-checks"])
+{
+    WorkProgressChecks.Run((ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);Console.WriteLine("PASS: "+name);});return;
+}
 if(args is ["--microsoft-iso-checks"])
 {
     var fixture=Path.Combine(Path.GetTempPath(),"TLOS-microsoft-iso-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(fixture);
@@ -6,6 +10,27 @@ if(args is ["--microsoft-iso-checks"])
     finally{Directory.Delete(fixture,true);}return;
 }
 
+if(args is ["--smb-source-native",var nativeSourceWim])
+{
+    var trial=Path.Combine(Path.GetTempPath(),"TechLoungeOS-smb-readonly-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(trial);
+    var mount=Path.Combine(trial,"mount");Directory.CreateDirectory(mount);
+    Policy.RequireUnlinkedPath(nativeSourceWim);
+    var runner=new ProcessRunner(Console.WriteLine,Path.Combine(trial,"scratch"));var mounted=false;
+    try
+    {
+        using(var lease=new FileStream(nativeSourceWim,FileMode.Open,FileAccess.Read,FileShare.None)){}
+        await runner.Dism("/Mount-Image","/ImageFile:"+nativeSourceWim,"/Index:1","/MountDir:"+mount,"/CheckIntegrity");mounted=true;
+        await LegacyNetwork.ValidateSource(runner,mount);
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{nativeSmbQueryPassed=true,queriesOnly=true,discardAfterQuery=true,source=nativeSourceWim,trial,noPhysicalUsbWritten=true}));
+    }
+    finally{if(mounted)await runner.Dism("/Unmount-Image","/MountDir:"+mount,"/Discard");}return;
+}
+if(args is ["--legacy-network-checks"])
+{
+    var fixture=Path.Combine(Path.GetTempPath(),"TechLoungeOS-smb-inert-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(fixture);
+    try{await LegacyNetworkChecks.Run(fixture,(ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);Console.WriteLine("PASS: "+name);});}
+    finally{Directory.Delete(fixture,true);}return;
+}
 var count = 0;
 ImageMetadataChecks.Run((ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);count++;Console.WriteLine("PASS: "+name);});
 if(args is ["--restart-notice-checks"])
@@ -179,6 +204,20 @@ if(args is ["--pe-startup-checks"])
     var fixture=Path.Combine(Path.GetTempPath(),"TechLoungeOS-pe-startup-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(fixture);
     try{PeStartupChecks.Run(fixture,(ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);Console.WriteLine("PASS: "+name);});}
     finally{Directory.Delete(fixture,true);}return;
+}
+if(args is ["--pe-metadata-native" or "--pe-metadata-existing",var originalPe,var stagedPe])
+{
+    var nativePeFolder=Path.Combine(Path.GetTempPath(),"TechLoungeOS-pe-metadata-"+Guid.NewGuid().ToString("N"));
+    if(new DriveInfo(Path.GetPathRoot(nativePeFolder)!).AvailableFreeSpace<(100L<<30)+new FileInfo(stagedPe).Length)throw new IOException("Keep host storage headroom before copying the native fixture");
+    string copy;
+    if(args[0]=="--pe-metadata-existing")
+    {
+        copy=Path.GetFullPath(stagedPe);var approvedPrefix=Path.Combine(Path.GetTempPath(),"TechLoungeOS-pe-metadata-");
+        if(!copy.StartsWith(approvedPrefix,StringComparison.OrdinalIgnoreCase)||Path.GetFileName(copy)!="boot.wim")throw new IOException("Only an owned native metadata fixture can be retried");
+    }
+    else{Directory.CreateDirectory(nativePeFolder);copy=Path.Combine(nativePeFolder,"boot.wim");File.Copy(stagedPe,copy,false);}
+    WinPeImage.PreserveWindowsMetadata(originalPe,copy);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{path=copy,bootIndex=WinPeImage.ReadBootIndex(copy),originalChanged=false,onlyGeneratedCopyChanged=true}));return;
 }
 if(args is ["--pe-image-info",var bootImage]){Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{bootIndex=WinPeImage.ReadBootIndex(bootImage)}));return;}
 if(args is ["--pe-image-checks"])
@@ -546,6 +585,7 @@ try
     Check(status.Trim() == "{\"answer\":42}", "real process output captured");
     await ProcessOutputChecks.Run(root,Check);
     await MicrosoftIsoChecks.Run(root,Check);
+    await IsoToolChecks.Run(root,Check);
     try { await runner.PowerShell("throw 'Synthetic servicing error'"); throw new Exception("Expected PowerShell failure"); }
     catch (IOException ex) { Check(ex.Message.Contains("Synthetic servicing error") && !ex.Message.Contains("#< CLIXML"), "PowerShell failures are readable without encoded error markup"); }
     var drained = Path.Combine(root, "drained.txt");

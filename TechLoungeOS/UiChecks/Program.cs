@@ -14,6 +14,10 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if(args is ["--usb-activity-checks" or "--usb-activity-video",var activityFolder])
+        {
+            var activityApp=new App(false);activityApp.InitializeComponent();UsbActivityChecks.Run(activityFolder,args[0]=="--usb-activity-video");activityApp.Shutdown();return;
+        }
         if(args is ["--release-video-frames",var videoOutputWithImage,var liveCatalogueWithImage,var importedFile])
         {
             var videoApp=new App(false);videoApp.InitializeComponent();ReleaseVideoFrames.Run(videoOutputWithImage,liveCatalogueWithImage,importedFile);videoApp.Shutdown();return;
@@ -25,6 +29,10 @@ internal static class Program
         if(args is ["--app-search-native",var nativeSearchFolder])
         {
             var nativeSearchApp=new App(false);nativeSearchApp.InitializeComponent();AppSuggestionChecks.RunNative(nativeSearchFolder);nativeSearchApp.Shutdown();return;
+        }
+        if(args is ["--app-list-checks",var listFolder])
+        {
+            var listApp=new App(false);listApp.InitializeComponent();AppListChecks.Run(listFolder);listApp.Shutdown();return;
         }
         if(args is ["--app-suggestion-checks"])
         {
@@ -211,14 +219,15 @@ internal static class Program
         showResults.Invoke(window, [new CatalogApp[] { new("Firefox", "Mozilla.Firefox", "fixture/no-artwork"), new("Steam", "Valve.Steam", "fixture/no-artwork") }]);
         Step(2);
         var results = (StackPanel)window.FindName("SearchResults"); var selections = (Panel)window.FindName("Apps");
-        ((Button)window.FindName("RecommendedPresetButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump(250);
+        ((ToggleButton)window.FindName("RecommendedPresetButton")).IsChecked=true;Pump(250);
         Layout(new Size(1160,740));
-        var appViewport=(ScrollViewer)window.FindName("SettingsScroll");
-        var viewportTop=appViewport.TranslatePoint(new Point(),(UIElement)window.Content).Y;
+        var pickerSurface=(FrameworkElement)window.FindName("AppPickerSurface");
+        pickerSurface.Measure(new Size(640,520));pickerSurface.Arrange(new Rect(0,0,640,pickerSurface.DesiredSize.Height));pickerSurface.UpdateLayout();
+        var popupViewport=(ScrollViewer)window.FindName("SearchResultsScroll");
         var firstSearchResult=(FrameworkElement)results.Children[0];
-        var resultTop=firstSearchResult.TranslatePoint(new Point(),(UIElement)window.Content).Y;
-        if(resultTop<viewportTop || resultTop+firstSearchResult.ActualHeight>viewportTop+appViewport.ActualHeight)
-            throw new Exception("Search results must stay visible at1160x740 after selecting the nine recommended apps.");
+        var resultTop=firstSearchResult.TranslatePoint(new Point(),popupViewport).Y;
+        if(resultTop<0 || resultTop+firstSearchResult.ActualHeight>popupViewport.ActualHeight)
+            throw new Exception("Search results must fit the picker independently of the selected list.");
         showResults.Invoke(window,[new CatalogApp[]{new("Discord","Discord.Discord","1"),TechLoungeOS.RecommendedApps.All[0],new("Discord PTB","Discord.Discord.PTB","1")}]);
         if(results.Children.Count!=1 || !((TextBlock)window.FindName("SearchStatus")).Text.StartsWith("1 result."))throw new Exception("Search count must describe the visible, deduplicated and supported choices.");
         typeof(MainWindow).GetMethod("ClearAppsClick",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(window,[window,new RoutedEventArgs()]);Pump(250);
@@ -308,12 +317,14 @@ internal static class Program
         if(recommendedDiscord.IsChecked!=true||!recommendedDiscord.IsEnabled)throw new Exception("Discord cards lost their shared state.");
         Toggle(recommendedDiscord);
         if(selections.Children.Count!=0||discord.IsChecked!=false)throw new Exception("Discord deselection failed.");
-        var preset=(Button)window.FindName("RecommendedPresetButton");
-        preset.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump(240);
+        var preset=(ToggleButton)window.FindName("RecommendedPresetButton");
+        preset.IsChecked=!preset.IsChecked;Pump(240);
         if(selections.Children.Count!=TechLoungeOS.RecommendedApps.PresetIds.Length)throw new Exception("The requested recommendations were not selected.");
         Snapshot(new Size(1160,860),"builder-recommended-selected.png");
-        preset.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));Pump(240);
-        if(selections.Children.Count!=TechLoungeOS.RecommendedApps.PresetIds.Length)throw new Exception("Recommended preset introduced duplicates.");
+        preset.IsChecked=!preset.IsChecked;Pump(240);
+        if(selections.Children.Count!=0)throw new Exception("Untoggling recommendations must remove the recommended set.");
+        preset.IsChecked=true;Pump(240);
+        if(selections.Children.Count!=TechLoungeOS.RecommendedApps.PresetIds.Length)throw new Exception("Retoggling recommendations must restore the set without duplicates.");
         var steam=selections.Children.OfType<ToggleButton>().Single(row=>((CatalogApp)row.Tag).Id=="Valve.Steam");
         Toggle(steam);
         if(selections.Children.Count!=TechLoungeOS.RecommendedApps.PresetIds.Length-1)throw new Exception("A recommended app could not be deselected individually.");

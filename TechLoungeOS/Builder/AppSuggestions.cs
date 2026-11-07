@@ -18,9 +18,13 @@ public partial class MainWindow
     {
         if(e.Key==Key.Enter){e.Handled=true;await SearchApps();}
         else if(e.Key==Key.Down && SearchResults.Children.OfType<AppChoice>().FirstOrDefault() is { } first)
-        {e.Handled=true;first.Focus();}
+        {
+            e.Handled=true;SearchResultsSection.Visibility=Visibility.Visible;AppLibrarySection.Visibility=Visibility.Collapsed;
+            AppPickerPopup.PlacementTarget=AppQuery;
+            if(IsVisible && currentStep==2){AppPickerPopup.IsOpen=true;_ = Dispatcher.BeginInvoke(new Action(()=>first.Focus()));}
+        }
         else if(e.Key==Key.Escape)
-        {appSearchRevision++;appSearch?.Cancel();SearchResultsSection.Visibility=Visibility.Collapsed;e.Handled=true;}
+        {appSearchRevision++;appSearch?.Cancel();SearchResultsSection.Visibility=Visibility.Collapsed;AppPickerPopup.IsOpen=false;e.Handled=true;}
     }
     private async void SearchAppsClick(object sender,RoutedEventArgs e)=>await SearchApps();
     internal async Task SearchApps(bool suggest=false,Func<string,CancellationToken,Task<CatalogApp[]>>? search=null)

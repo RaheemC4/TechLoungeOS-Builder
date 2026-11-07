@@ -17,7 +17,7 @@ Build a Windows 11 installer with your apps, desktop and setup preferences alrea
 
 Your original ISO is retained unless you explicitly choose and confirm replacement. This is a separate app from TechLoungeTweaks. Windows, Office and third-party apps retain their own licensing requirements.
 
-Requires Windows 11 x64, administrator permission, local NTFS working space and the Microsoft ADK Deployment Tools for ISO export. Selected online apps need internet at first sign-in.
+Requires Windows 11 x64, administrator permission and local NTFS working space. Required build components are prepared and verified automatically; no separate ADK setup is needed. First-time preparation and selected online apps need internet.
 
 Office uses the normal Microsoft deployment tools and your own account or licence. Activation tools are not included.
 

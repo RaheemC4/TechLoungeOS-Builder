@@ -30,6 +30,10 @@ public partial class MainWindow
         SearchStatus.Text=results.Length==0?(alreadyIncluded?"Already included in every ISO. No need to add it.":"No matching apps. Try another name."):$"{results.Length} {(results.Length==1?"result":"results")}. Check the package ID before adding.";
         SearchResults.Children.Clear();
         SearchResultsSection.Visibility=results.Length==0?Visibility.Collapsed:Visibility.Visible;
+        AppLibrarySection.Visibility=Visibility.Collapsed;PickerHeading.Text="Choose an app";
+        AppPickerPopup.PlacementTarget=AppQuery;
+        AppPickerPopup.PopupAnimation=SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast?System.Windows.Controls.Primitives.PopupAnimation.Fade:System.Windows.Controls.Primitives.PopupAnimation.None;
+        if(IsVisible)AppPickerPopup.IsOpen=results.Length>0 && currentStep==2;
             foreach (var app in results)
                 SearchResults.Children.Add(SelectableRow(app));
         RefreshApps();
@@ -102,19 +106,24 @@ public partial class MainWindow
     {
         syncingAppChoices=true;
         try {
-        SelectedCount.Text = $"Your app list ({selectedApps.Count})";
-        SelectedAppsDetails.Visibility=selectedApps.Count==0?Visibility.Collapsed:Visibility.Visible;
+        SelectedCount.Text = $"Your apps ({selectedApps.Count})";
+        EmptyApps.Visibility=selectedApps.Count==0?Visibility.Visible:Visibility.Collapsed;
+        RecommendedPresetButton.IsChecked=RecommendationsSelected;
         foreach(var row in Apps.Children.OfType<AppChoice>().ToArray())
         {
             var app=(CatalogApp)row.Tag;
             var present=selectedApps.Any(a=>TechLoungeOS.RecommendedApps.Identity(a.Id).Equals(TechLoungeOS.RecommendedApps.Identity(app.Id),StringComparison.OrdinalIgnoreCase));
+            if(!present&&row.IsKeyboardFocusWithin)AddAppsButton.Focus();
             row.IsChecked=present;
             row.SelectionVisibility(present,()=>Apps.Children.Remove(row));
         }
         foreach (var app in selectedApps)
         {
             if(!Apps.Children.OfType<AppChoice>().Any(row=>TechLoungeOS.RecommendedApps.Identity(((CatalogApp)row.Tag).Id).Equals(TechLoungeOS.RecommendedApps.Identity(app.Id),StringComparison.OrdinalIgnoreCase)))
-                Apps.Children.Add(SelectableRow(app,true));
+                {
+                var choice=SelectableRow(app,true);Apps.Children.Add(choice);
+                choice.SelectionVisibility(true,()=>Apps.Children.Remove(choice));
+            }
         }
         foreach (var button in Apps.Children.OfType<AppChoice>().Concat(SearchResults.Children.OfType<AppChoice>()).Concat(RecommendedApps.Children.OfType<AppChoice>()))
         {
@@ -127,12 +136,33 @@ public partial class MainWindow
         }
         }finally{syncingAppChoices=false;}
     }
-    private void RecommendedAppsClick(object sender,RoutedEventArgs e)
+    private bool RecommendationsSelected=>TechLoungeOS.RecommendedApps.PresetIds.All(id=>selectedApps.Any(a=>TechLoungeOS.RecommendedApps.Identity(a.Id).Equals(TechLoungeOS.RecommendedApps.Identity(id),StringComparison.OrdinalIgnoreCase)));
+    private void RecommendedAppsChanged(object sender,RoutedEventArgs e)
     {
-        if(running)return;
-        var next=TechLoungeOS.RecommendedApps.ApplyPreset(selectedApps);
-        selectedApps.Clear();selectedApps.AddRange(next);RefreshApps();
-        SearchStatus.Text="Recommended apps selected. Click any highlighted app to deselect it.";
+        if(syncingAppChoices)return;
+        if(running||recoveryRequired){RefreshApps();return;}
+        var remove=RecommendedPresetButton.IsChecked!=true;
+        if(remove)selectedApps.RemoveAll(a=>TechLoungeOS.RecommendedApps.PresetIds.Any(id=>TechLoungeOS.RecommendedApps.Identity(a.Id).Equals(TechLoungeOS.RecommendedApps.Identity(id),StringComparison.OrdinalIgnoreCase)));
+        else {var next=TechLoungeOS.RecommendedApps.ApplyPreset(selectedApps);selectedApps.Clear();selectedApps.AddRange(next);}
+        RefreshApps();
+        SearchStatus.Text=remove?"Recommended apps removed. Your other choices are kept.":"Recommended apps added. Untick any app to remove it.";
     }
-    private void ClearAppsClick(object sender, RoutedEventArgs e) { selectedApps.Clear(); RefreshApps(); }
+    private void BrowseAppsClick(object sender,RoutedEventArgs e)
+    {
+        if(running||recoveryRequired)return;
+        appSearchRevision++;appSearch?.Cancel();AppQuery.Clear();
+        SearchResultsSection.Visibility=Visibility.Collapsed;AppLibrarySection.Visibility=Visibility.Visible;PickerHeading.Text="Add apps";
+        AppPickerPopup.PlacementTarget=AddAppsButton;
+        AppPickerPopup.PopupAnimation=SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast?System.Windows.Controls.Primitives.PopupAnimation.Fade:System.Windows.Controls.Primitives.PopupAnimation.None;
+        if(IsVisible)AppPickerPopup.IsOpen=true;
+    }
+    private void AppPickerOpened(object? sender,EventArgs e)
+    {
+        if(running||currentStep!=2){AppPickerPopup.IsOpen=false;return;}
+        AppPickerSurface.Width=Math.Min(640,Math.Max(320,AppsPage.ActualWidth));
+        SearchResultsScroll.MaxHeight=AppLibraryScroll.MaxHeight=Math.Clamp(SystemParameters.WorkArea.Height*.42,120,360);
+    }
+    private void CloseAppPicker(object sender,RoutedEventArgs e){AppPickerPopup.IsOpen=false;AddAppsButton.Focus();}
+    private void AppPickerKeyDown(object sender,KeyEventArgs e){if(e.Key==Key.Escape){e.Handled=true;AppPickerPopup.IsOpen=false;AppQuery.Focus();}}
+    private void ClearAppsClick(object sender, RoutedEventArgs e) { if(running||recoveryRequired)return;selectedApps.Clear(); RefreshApps(); }
 }

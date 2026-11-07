@@ -5,9 +5,10 @@ public static class LegacyNetwork
     public const string Script="$guest=$true;$smb1=$true;$client=$true;$server=$true\n"+Worker;
     public static async Task ValidateSource(ICommandRunner runner,string mount)
     {
-        var result=await runner.PowerShell("# TechLoungeOS mandatory SMB1 source check\n$ErrorActionPreference='Stop';$f=Get-WindowsOptionalFeature -Path "+Policy.Ps(mount)+" -FeatureName SMB1Protocol-Client; [string]$f.State");
-        if(result.Trim() is not ("Enabled" or "Disabled" or "EnablePending"))
-            throw new IOException("Required SMB1 client payload is unavailable in this ISO ("+result.Trim()+"). A matching authorised Windows component source is needed. No incomplete ISO was exported and the original ISO is unchanged.");
+        var inventory=ImageServicing.Features(await runner.Dism("/Image:"+mount,"/Get-FeatureInfo","/FeatureName:SMB1Protocol-Client"));
+        var feature=inventory.SingleOrDefault(f=>f.FeatureName.Equals("SMB1Protocol-Client",StringComparison.OrdinalIgnoreCase));
+        if(feature is null || feature.State is not ("Enabled" or "Disabled" or "Enable Pending" or "EnablePending"))
+            throw new IOException("Required legacy-network client files are unavailable in this ISO. A matching Windows component source is needed; no incomplete ISO was exported.");
     }
     public const string Verify="""
 

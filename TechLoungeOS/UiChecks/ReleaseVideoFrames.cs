@@ -24,7 +24,7 @@ internal static class ReleaseVideoFrames
             }
             ((RadioButton)window.FindName("AppsStep")).IsChecked=true;
             Render(window,"apps-before.png");
-            ((Button)window.FindName("RecommendedPresetButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            ((System.Windows.Controls.Primitives.ToggleButton)window.FindName("RecommendedPresetButton")).IsChecked=true;
             Render(window,"apps.png");
             ((RadioButton)window.FindName("PersonalisationStep")).IsChecked=true;
             Render(window,"desktop.png");
@@ -51,7 +51,7 @@ internal static class ReleaseVideoFrames
             view.Width=width;view.Height=height;
             var surface=(FrameworkElement)view.Content;if(surface is Panel panel)panel.SetResourceReference(Panel.BackgroundProperty,"Canvas");var size=new Size(width,height);
             surface.Measure(size);surface.Arrange(new Rect(size));surface.UpdateLayout();
-            var bitmap=new RenderTargetBitmap(width,height,96,96,PixelFormats.Pbgra32);bitmap.Render(surface);
+            var bitmap=new RenderTargetBitmap(width*2,height*2,192,192,PixelFormats.Pbgra32);bitmap.Render(surface);
             var encoder=new PngBitmapEncoder();encoder.Frames.Add(BitmapFrame.Create(bitmap));
             using var file=File.Create(Path.Combine(output,name));encoder.Save(file);
         }

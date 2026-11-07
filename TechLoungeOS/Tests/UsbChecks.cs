@@ -25,6 +25,7 @@ static class UsbChecks
             catch(IOException){check(true,"resource DLL,unsupported architecture,non-executable or invalid header is rejected before erase");}
         }
         var good=new UsbDisk(99,"usb-unique","SERIAL-99",@"\\?\usbstor#fixture","Fixture USB",64L<<30,7,512,false,false,false,false,false,["R"]);
+        check(good.Label=="Fixture USB · 68.7 GB · R:" && !good.Label.Contains("SERIAL") && !good.Label.Contains("Disk"),"USB dropdown uses name, capacity and drive letter without hardware-identity jargon");
         check(BootableDrive.Rejection(good)==null,"USB eligibility accepts an identified non-system USB disk");
         check(BootableDrive.Rejection(good with{Size=8_000_000_000L})==null&&BootableDrive.PartitionBytes(good with{Size=8_000_000_000L},6_000_000_000L)>6_500_000_000L,"a retail 8 GB drive is eligible when the actual media and headroom fit");
         check(BootableDrive.Rejection(good with{Size=7_999_999_999L})!=null,"USB minimum capacity uses the advertised decimal GB unit");

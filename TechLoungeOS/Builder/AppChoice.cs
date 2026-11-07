@@ -9,6 +9,8 @@ internal sealed class AppChoice : ToggleButton
 {
     private int transition;
     private bool? selectionVisible;
+    private double? selectionMinimum;
+    private Thickness? selectionSpacing;
     private static bool Motion => SystemParameters.ClientAreaAnimation&&!SystemParameters.HighContrast;
     public AppChoice() => SetResourceReference(StyleProperty,"AppChoice");
     public override void OnApplyTemplate(){base.OnApplyTemplate();UpdateVisuals(false);}
@@ -30,14 +32,15 @@ internal sealed class AppChoice : ToggleButton
     internal void SelectionVisibility(bool visible,Action remove)
     {
         if(selectionVisible==visible)return;
+        selectionMinimum??=MinHeight;selectionSpacing??=Margin;
         selectionVisible=visible;
         var version=++transition;
         IsHitTestVisible=visible;
-        Focusable=visible;MinHeight=visible?62:0;
+        Focusable=visible;MinHeight=visible?selectionMinimum.Value:0;
         if(!Motion||!IsLoaded)
         {
             BeginAnimation(MaxHeightProperty,null);BeginAnimation(MarginProperty,null);BeginAnimation(OpacityProperty,null);
-            MaxHeight=double.PositiveInfinity;Margin=new Thickness(0,4,0,4);Opacity=1;
+            MaxHeight=double.PositiveInfinity;Margin=selectionSpacing.Value;Opacity=1;
             if(!visible)remove();return;
         }
         var from=ActualHeight;BeginAnimation(MaxHeightProperty,null);BeginAnimation(MarginProperty,null);
@@ -45,7 +48,7 @@ internal sealed class AppChoice : ToggleButton
         var duration=TimeSpan.FromMilliseconds(150);
         if(visible)
         {
-            Fade(this,1,130,true);Margin=new Thickness(0,4,0,4);return;
+            Fade(this,1,130,true);Margin=selectionSpacing.Value;return;
         }
         Fade(this,0,130,true);
         var collapse=new DoubleAnimation(from,0,duration){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut},FillBehavior=FillBehavior.Stop};

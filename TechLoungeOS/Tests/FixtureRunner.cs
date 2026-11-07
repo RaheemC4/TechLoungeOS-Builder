@@ -15,7 +15,6 @@ sealed class FixtureRunner(string workspace, bool failRemoval = false, bool fail
             if (failVerification) throw new IOException("Injected export verification failure");
             return Task.FromResult("Fixture export verification only; no ISO mounted.");
         }
-        if(script.StartsWith("# TechLoungeOS mandatory SMB1 source check"))return Task.FromResult("Disabled");
         if(script.StartsWith("[string](Get-WindowsImage -ImagePath ")&&script.Contains("packed-install.esd"))return Task.FromResult("10.0.26200.1");
         if (script.Contains("TlosWimMetadata")) return Task.FromResult("<WIM><IMAGE INDEX='2'><NAME>Windows 11 Pro</NAME><WINDOWS><ARCH>9</ARCH><EDITIONID>Professional</EDITIONID><VERSION><MAJOR>10</MAJOR><MINOR>0</MINOR><BUILD>26200</BUILD><SPBUILD>1</SPBUILD></VERSION></WINDOWS></IMAGE></WIM>");
         if (script.Contains("Get-WindowsImage -ImagePath")) return Task.FromResult("""[{"ImageIndex":2,"ImageName":"Windows 11 Pro","Architecture":"9","Version":"10.0.26200.1"}]""");
@@ -60,6 +59,7 @@ sealed class FixtureRunner(string workspace, bool failRemoval = false, bool fail
         if (failInventory && args.Contains("/Get-ProvisionedAppxPackages")) throw new IOException("Native inventory initialization failed (87)");
         if (failPostFeatureInventory && featureDisabled && args.Contains("/Get-Features")) throw new IOException("Post-servicing feature inventory failed (87)");
         if (args.Contains("/Get-ProvisionedAppxPackages")) return Task.FromResult((packageRemoved ? "" : "DisplayName : Microsoft.BingNews\r\nPackageName : Microsoft.BingNews_1.0_x64__abc\r\n") + "The operation completed successfully.");
+        if(args.Contains("/Get-FeatureInfo")&&args.Contains("/FeatureName:SMB1Protocol-Client"))return Task.FromResult("Feature Name : SMB1Protocol-Client\r\nState : Disabled\r\nThe operation completed successfully.");
         if (args.Contains("/Get-Features")) return Task.FromResult("Feature Name : WorkFolders-Client\r\nState : " + (featureDisabled ? "Disabled" : "Enabled") + "\r\nThe operation completed successfully.");
         if (args.Contains("/Export-Image")) File.WriteAllText(Path.Combine(workspace, "selected.wim"), "fixture wim");
         if (failRemoval && args.Contains("/Remove-ProvisionedAppxPackage")) throw new IOException("Injected removal failure");
