@@ -1,3 +1,9 @@
+## 7 November 20:00 UTC: public 0.1.36 and hosted update accepted
+
+Published stable release v0.1.36.0 from reviewed source4f35b5c, with only the app ZIP and signed update manifest. The production updater fetched the actual public latest feed, verified its signed manifest, downloaded the433,322,455byte package and verified/extracted all298files. The shipped older0.1.35 updater then applied0.1.36 to a dedicated app clone and returned0; all298installed hashes matched and an unrelated read-only user file remained intact. A subsequent signed public-feed check reported no newer version. The stable latest-download URL resolves successfully to the same asset size. Evidence: package2889-proof.json, release2894-publish.json, hosted2896-proof.json, hosted2896-apply.log, hosted2896-latest.json and stable2897-proof.json. This verifies hosted delivery and native application, not a new Windows installation or every network/security environment.
+
+The updated25second video includes direct Microsoft ISO download, the approved icon, app selection, wallpaper, retained WinPE footage and three output choices. Final lint/runtime/layout/contrast checks passed without errors or warnings. The rendered1920x1080/30fps H264/AAC file was visually inspected across the export; headline and secondary text were revised to cool blue-white. App footage retains its actual colours. It is edited supported interface states, not continuous recording. No new VM was started. Original Windows downloads and existing Ghost media were not changed.
+
 ## 7 November: 0.1.36 download and import improvement
 
 Microsoft's current UK x64 ISO downloaded completely using the production downloader:9,061,271,552bytes, SHA2567E3F373BD3C2321B5D5125DFCF718DFBF1A0ABC50A267118669951890DF98A5D. Microsoft supplied no comparison hash; this is a calculated digest, not a published-hash match. The user confirmed the packaged app listed its editions.

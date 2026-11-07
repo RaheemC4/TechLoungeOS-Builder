@@ -8,6 +8,8 @@ Replaced the output dropdown with three icon buttons: Setup USB, Save ISO, USB+I
 
 964 ordinary automated checks, compiled WPF usability/layout/copy checks and the signed298file package passed. A full9,061,271,552byte Microsoft UK ISO download completed; the user confirmed its editions appear in the packaged app. Main executable remains Authenticode unsigned; update-envelope signing is separate. No new Windows installation was required for this app-only release.
 
+Hosted update check passed after publication: real public download, actual0.1.35 updater application, all298installed file hashes, unrelated-file preservation and latest-version feed verification.
+
 ## 0.1.35
 
 Restored a single opening-screen action for copying an already-finished ISO to USB, without rebuilding it. It hides after selecting an edition, keeping customisation in Finish. Existing erase confirmation and file verification remain unchanged. The native-validated Windows enablement route is now described as reviewed; unknown future routes remain blocked.
