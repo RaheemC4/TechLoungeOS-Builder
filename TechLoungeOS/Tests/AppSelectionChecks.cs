@@ -5,10 +5,13 @@ static class AppSelectionChecks
     public static async Task Run(string root,Action<bool,string> check)
     {
         var standard=RecommendedApps.ForBuild([]);
-        check(standard.SequenceEqual(new[]{RecommendedApps.HatchZip}),"a real build with no optional apps still includes HatchZip");
-        var required=RecommendedApps.ForBuild(["VideoLAN.VLC","techlounge.hatchzip"]);
-        check(required.Length==2 && required.Contains("VideoLAN.VLC") && required.Count(RecommendedApps.IncludedInIso)==1,"mandatory HatchZip is deduplicated while retaining optional selections");
+        check(standard.SequenceEqual(new[]{RecommendedApps.HatchZip,RecommendedApps.Shiftd}),"a real build with no optional apps still includes HatchZip and Shiftd");
+        var required=RecommendedApps.ForBuild(["VideoLAN.VLC","techlounge.hatchzip","TECHLOUNGE.SHIFTD",RecommendedApps.Shiftd]);
+        check(required.SequenceEqual(new[]{"VideoLAN.VLC",RecommendedApps.HatchZip,RecommendedApps.Shiftd}) && required.Count(RecommendedApps.IncludedInIso)==2,"mandatory apps are canonicalized and deduplicated while retaining optional selections");
         check(Provisioning.Script(standard,false,false).Contains("Invoke-Step 'TechLounge.HatchZip'") && AppRecipes.NeedsPayload(standard[0]),"mandatory HatchZip uses the existing verified payload and provisioning recipe");
+        var firstLogin=Provisioning.Script(standard,false,false);
+        check(firstLogin.Contains("Invoke-Step 'TechLounge.Shiftd'") && firstLogin.Contains("Shiftd.exe") && firstLogin.Contains("-ArgumentList '/S'") && AppRecipes.NeedsPayload(RecommendedApps.Shiftd),"mandatory Shiftd uses its bundled payload and silent first-login installer even with no optional apps");
+        check(BootOptimizer.FirstLogin(standard).Contains("TechLounge.Shiftd") && RecommendedApps.IncludedInIso("techlounge.shiftd"),"Boot Optimizer waits for Shiftd and it cannot be treated as an optional selection");
         var shortcutFixture=Path.Combine(root,"hatch-shortcut");Directory.CreateDirectory(shortcutFixture);
         var shortcutScript=AppRecipes.HatchZipShortcut.Replace("[Environment]::GetFolderPath('Desktop')","(Join-Path $fixture desktop)");
         var shortcutResult=await new ProcessRunner(_=>{}).PowerShell("$fixture="+Policy.Ps(shortcutFixture)+"\n"+"""

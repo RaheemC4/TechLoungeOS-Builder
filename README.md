@@ -7,7 +7,7 @@ Build a Windows 11 installer with your apps, desktop and setup preferences alrea
 - Download Windows 11 from Microsoft or import an ISO, then choose an edition and components.
 - Search for apps or select the recommended set, including Discord, Stremio, Proton VPN and HWiNFO64.
 - Create a local account and device name in the redesigned WinPE setup.
-- Include Microsoft 365, runtimes, Store/Xbox and TechLoungeTweaks integration.
+- Include Shiftd, HatchZip, Microsoft 365, runtimes, Store/Xbox and TechLoungeTweaks integration.
 - Reach the desktop first, then finish installs quietly with progress and retry controls.
 - Run the Boot Optimizer after selected apps finish installing.
 - Choose OLED-friendly wallpapers, colours and desktop defaults.

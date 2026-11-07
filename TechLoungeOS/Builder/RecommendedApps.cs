@@ -6,17 +6,18 @@ public static class RecommendedApps
     public const string ChatGPT = "TechLounge.ChatGPT";
     public const string ChatGPTStore = "9PLM9XGG6VKS";
     public const string HatchZip = "TechLounge.HatchZip";
+    public const string Shiftd = "TechLounge.Shiftd";
     public static bool IsDiscord(string id) => id.Equals(Discord,StringComparison.OrdinalIgnoreCase)||id.Equals("Discord.Discord",StringComparison.OrdinalIgnoreCase);
     public static bool IsChatGPT(string id) => id.Equals(ChatGPT,StringComparison.OrdinalIgnoreCase)||id.Equals("OpenAI.ChatGPT",StringComparison.OrdinalIgnoreCase);
     public static bool UnsupportedDiscord(string id) => !IsDiscord(id) && (id.Contains("discord",StringComparison.OrdinalIgnoreCase)||new[]{"Vencord.","Equicord.","ArmCord.","Vesktop."}.Any(p=>id.StartsWith(p,StringComparison.OrdinalIgnoreCase)));
     public static string NormalizeId(string id)
     {
         if(UnsupportedDiscord(id))throw new InvalidOperationException("Choose Discord from Recommended apps. Other Discord editions are not supported.");
-        return IsDiscord(id)?Discord:IsChatGPT(id)?ChatGPT:id.Equals(HatchZip,StringComparison.OrdinalIgnoreCase)?HatchZip:id;
+        return IsDiscord(id)?Discord:IsChatGPT(id)?ChatGPT:id.Equals(HatchZip,StringComparison.OrdinalIgnoreCase)?HatchZip:id.Equals(Shiftd,StringComparison.OrdinalIgnoreCase)?Shiftd:id;
     }
     public static string[] NormalizeIds(IEnumerable<string> ids)=>ids.Select(NormalizeId).ToArray();
-    public static string[] ForBuild(IEnumerable<string> ids)=>NormalizeIds(ids.Append(HatchZip)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
-    public static bool IncludedInIso(string id) => id.Equals("Microsoft.Office",StringComparison.OrdinalIgnoreCase) || id.Equals("Microsoft.Edge",StringComparison.OrdinalIgnoreCase) || id.Equals(HatchZip,StringComparison.OrdinalIgnoreCase);
+    public static string[] ForBuild(IEnumerable<string> ids)=>NormalizeIds(ids.Append(HatchZip).Append(Shiftd)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+    public static bool IncludedInIso(string id) => id.Equals("Microsoft.Office",StringComparison.OrdinalIgnoreCase) || id.Equals("Microsoft.Edge",StringComparison.OrdinalIgnoreCase) || id.Equals(HatchZip,StringComparison.OrdinalIgnoreCase) || id.Equals(Shiftd,StringComparison.OrdinalIgnoreCase);
     public static string Identity(string id) => IsDiscord(id) ? "Discord.Discord" : IsChatGPT(id)?"OpenAI.ChatGPT":id;
     public static CatalogApp[] Selectable(IEnumerable<CatalogApp> apps) => apps
         .Where(a=>!UnsupportedDiscord(a.Id) && (IsDiscord(a.Id)||!a.Name.Contains("Discord",StringComparison.OrdinalIgnoreCase)))
@@ -27,7 +28,7 @@ public static class RecommendedApps
     public static readonly CatalogApp[] All = [
         new("Discord", Discord, "Latest", "Chat and voice for your communities"),
         new("HatchZip", "TechLounge.HatchZip", "TechLounge setup", "File tools · Extract ZIP, 7z and tar archives. Extraction consumes the source archive."),
-        new("Shiftd", "TechLounge.Shiftd", "TechLounge setup", "File tools · Offline file conversion, compression, image resizing and audio/video trimming."),
+        new("Shiftd", Shiftd, "Included in ISO", "File tools · Offline file conversion, compression, image resizing and audio/video trimming."),
         new("Steam", "Valve.Steam", "Latest", "Game clients"),
         new("Epic Games Launcher", "EpicGames.EpicGamesLauncher", "Latest", "Game clients"),
         new("Ubisoft Connect", "Ubisoft.Connect", "Latest", "Game clients"),

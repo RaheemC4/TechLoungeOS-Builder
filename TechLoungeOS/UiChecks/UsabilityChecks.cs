@@ -90,6 +90,10 @@ internal static class UsabilityChecks
                 Require(lines.Length==2 && lines[1].Text.Length>40 && choice.IsChecked!=true,"Optional component has inline guidance without selecting removal: "+id);
             }
             Require(window.FindName("UsbButton")==null && window.FindName("ExportUsbButton")==null,"Duplicate sidebar and post-export USB actions remain absent");
+            var category=(ComboBox)window.FindName("AppCategory");category.SelectedIndex=1;
+            var optional=(System.Windows.Controls.Primitives.UniformGrid)window.FindName("RecommendedApps");
+            Require(optional.Children.Count>0 && optional.Children.OfType<System.Windows.Controls.Primitives.ToggleButton>().All(c=>c.Tag is CatalogApp a && !RecommendedApps.IncludedInIso(a.Id)),"All optional apps excludes fixed inclusions, including Shiftd");
+            category.SelectedIndex=0;
             var outputs=new[]{"UsbOutput","IsoOutputChoice","BothOutput"}.Select(n=>(RadioButton)window.FindName(n)).ToArray();
             Require(outputs.Length==3 && outputs[0].IsChecked==true && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Collapsed,"USB-only defaults to no ISO destination input");
             outputs[1].IsChecked=true;Require(outputs[0].IsChecked==false && outputs[2].IsChecked==false,"Output buttons enforce a single selected destination");Require(((TextBlock)window.FindName("BuildActionLabel")).Text=="Save ISO" && ((FrameworkElement)window.FindName("IsoDestinationSection")).Visibility==Visibility.Visible,"ISO-only exposes the single save destination and action");

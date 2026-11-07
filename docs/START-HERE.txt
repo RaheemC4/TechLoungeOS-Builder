@@ -1,4 +1,4 @@
-TechLoungeOS Builder 0.1.36
+TechLoungeOS Builder 0.1.37
 
 Extract the whole package and open TechLoungeOS.Builder.exe. Keep its support
 folders beside it. The Builder needs Windows 11 x64, administrator permission

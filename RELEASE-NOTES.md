@@ -1,3 +1,9 @@
+## 0.1.37
+
+Shiftd is now a required inclusion, like HatchZip. Every new customised ISO or customise-to-USB build adds its verified offline installer and silent first-login recipe even when the optional app list is empty. It is removed from optional browsing and search selection, cannot be deselected, and is deduplicated if an older selection already contains it. Boot Optimizer waits for Shiftd's completion receipt with the other apps.
+
+966 automated checks and compiled WPF usability/copy checks passed. The actual394,626,869byte installer downloaded through the production recipe and matched the pinned SHA256. No installer was executed on the host and no fresh Windows install was repeated for this mandatory-selection change. Direct copying of an already-existing ISO retains that ISO's existing contents; it does not inject customisations. Existing ISOs/USBs are not changed retroactively.
+
 ## 0.1.36
 
 Download Windows 11 x64 directly from Microsoft with UK English first, a compact scroll-free dialogue, progress, cancellation and safe save handling. Successful lookup hides website/retry recovery actions. Downloads retain existing ISOs, validate size/format and calculate SHA-256; a Microsoft comparison hash is verified when supplied.
