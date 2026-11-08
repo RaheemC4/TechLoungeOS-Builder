@@ -43,7 +43,14 @@ static class SetupAnswerChecks
         check(template.Descendants(ns+"SynchronousCommand").Select(c=>c.Element(ns+"Order")!.Value).SequenceEqual(new[]{"1","2"}) && template.Descendants(ns+"LogonCount").Single().Value=="2","wizard adds a distinct first-sign-in command without overwriting an inherited command");
         check(template.Descendants(ns+"Password").Select(p=>p.Element(ns+"Value")!.Value).SequenceEqual(new[]{"TLOS_PASSWORD_7D91","TLOS_AUTO_PASSWORD_7D91"}),"ISO templates contain inert credential markers, never a supplied or generated password");
         var manual=XDocument.Parse(SetupAnswerFile.Template(false));
-        check(manual.Descendants(ns+"AutoLogon").Single().Element(ns+"Enabled")!.Value=="false" && !manual.ToString().Contains("TLOS_AUTO_PASSWORD_7D91"),"manual sign-in explicitly disables inherited automatic sign-in and has no auto-sign-in password marker");
+        var disabledLogin=manual.Descendants(ns+"AutoLogon").Single();
+        check(disabledLogin.Elements().Count()==1 && disabledLogin.Element(ns+"Enabled")!.Value=="false" && !manual.ToString().Contains("TLOS_AUTO_PASSWORD_7D91"),"manual sign-in disables inherited automatic sign-in without the zero LogonCount rejected during real OOBE or unused credentials");
+        var numericPassword=Convert.ToBase64String(Encoding.Unicode.GetBytes("482619Password"));
+        var ehsan=XDocument.Parse(SetupAnswerFile.Template(false).Replace("TLOS_USER_7D91","ehsan").Replace("TLOS-PC-7D91","EhsanPC")
+            .Replace("TLOS_PASSWORD_7D91",numericPassword).Replace("TLOS_HELLO_7D91","1"));
+        check(ehsan.Descendants(ns+"Name").Single().Value=="ehsan" && ehsan.Descendants(ns+"Password").Single().Element(ns+"Value")!.Value==numericPassword &&
+            !ehsan.Descendants(ns+"LogonCount").Any() && ehsan.Descendants(ns+"CommandLine").Single().Value.EndsWith("--automatic 0 --hello 1"),
+            "numeric account password, manual sign-in and requested Hello retain account choices without zero-count automatic-login settings");
         foreach(var automatic in new[]{false,true})
         {
             var setupTemplate=XDocument.Parse(SetupAnswerFile.Template(automatic));

@@ -14,7 +14,9 @@ public static class StoreXbox
         ("9MV0B5HZVK9Z", "Microsoft.GamingApp"),
         ("9MWPM2CQNLHN", "Microsoft.GamingServices"),
         ("9WZDNCRD1HKW", "Microsoft.XboxIdentityProvider"),
-        ("9NZKPSTSNW4P", "Microsoft.XboxGamingOverlay")
+        ("9NZKPSTSNW4P", "Microsoft.XboxGamingOverlay"),
+        ("9MSMLRH6LZF3", "Microsoft.WindowsNotepad"),
+        ("9MZ95KL8MR0L", "Microsoft.ScreenSketch")
     ];
     public record Package(string Identity, string Main, string[] Dependencies, Dictionary<string, string> Hashes);
 
@@ -95,7 +97,7 @@ public static class StoreXbox
             foreach ($name in @('RemoveWindowsStore','DisableStoreApps')) {
               if ((Get-ItemProperty $policy -ErrorAction SilentlyContinue).PSObject.Properties.Name -contains $name) { Remove-ItemProperty -Path $policy -Name $name -ErrorAction Stop }
             }
-            foreach ($name in @('Microsoft.WindowsStore','Microsoft.StorePurchaseApp','Microsoft.GamingApp','Microsoft.GamingServices','Microsoft.XboxIdentityProvider','Microsoft.XboxGamingOverlay')) {
+            foreach ($name in @('Microsoft.WindowsStore','Microsoft.StorePurchaseApp','Microsoft.GamingApp','Microsoft.GamingServices','Microsoft.XboxIdentityProvider','Microsoft.XboxGamingOverlay','Microsoft.WindowsNotepad','Microsoft.ScreenSketch')) {
               if (!(Get-AppxPackage -Name $name)) { Add-AppxPackage -RegisterByFamilyName -MainPackage ($name + '_8wekyb3d8bbwe') -ErrorAction Stop }
               for($wait=0;$wait -lt 15;$wait++) {
                 if(Get-AppxPackage -Name $name | Where-Object Status -eq 'Ok'){break}

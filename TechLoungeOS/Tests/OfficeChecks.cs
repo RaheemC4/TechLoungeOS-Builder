@@ -11,6 +11,20 @@ static class OfficeChecks
         catch (InvalidOperationException ex) when (ex.Message == "Office is required in every app-created ISO.")
         { check(!Directory.Exists(omitted.Workspace), "production builds cannot omit Office, even outside the UI; rejection creates no workspace or commands"); }
         var originalCache=Path.Combine(root,"office-original-cache");SeedCache(originalCache,"16.0.99999.99");
+        var cacheReceipt=Path.Combine(originalCache,"TechLoungeOS-Office.sha256.json");
+        var cacheHashes=Directory.GetFiles(Path.Combine(originalCache,"Office"),"*",SearchOption.AllDirectories).ToDictionary(f=>Path.GetRelativePath(originalCache,f),RuntimePack.Hash);
+        File.WriteAllText(cacheReceipt,JsonSerializer.Serialize(cacheHashes));
+        var checkedCopy=Path.Combine(root,"checked-office-copy");Directory.CreateDirectory(checkedCopy);
+        check(OfficePack.CopyCache(originalCache,checkedCopy,CancellationToken.None)&&cacheHashes.All(p=>RuntimePack.Hash(Path.Combine(checkedCopy,p.Key))==p.Value),"a prior Builder Office cache is fully hashed and copied without changing its original data");
+        var corrupted=Path.Combine(originalCache,"Office","Data","16.0.99999.99","s640.cab");File.WriteAllBytes(corrupted,[2]);
+        var rejectedCopy=Path.Combine(root,"rejected-office-copy");Directory.CreateDirectory(rejectedCopy);
+        check(!OfficePack.CopyCache(originalCache,rejectedCopy,CancellationToken.None)&&!Directory.Exists(Path.Combine(rejectedCopy,"Office")),"a same-length corrupted Office cache is rejected before copying, allowing fresh Current acquisition");
+        File.WriteAllBytes(corrupted,[1]);
+        File.WriteAllText(Path.Combine(originalCache,"Office","unexpected.bin"),"not in the accepted receipt");
+        check(!OfficePack.CopyCache(originalCache,rejectedCopy,CancellationToken.None),"unexpected Office cache files are not imported silently");File.Delete(Path.Combine(originalCache,"Office","unexpected.bin"));
+        File.WriteAllText(cacheReceipt,"{bad json");
+        check(!OfficePack.CopyCache(originalCache,rejectedCopy,CancellationToken.None),"an interrupted Office cache receipt falls back without consuming cached data");
+        File.WriteAllText(cacheReceipt,JsonSerializer.Serialize(cacheHashes));
         var refreshing=Path.Combine(root,"office-refresh");Directory.CreateDirectory(refreshing);
         Provisioning.CopyTree(Path.Combine(originalCache,"Office"),Path.Combine(refreshing,"Office"));
         var download=new CurrentDownload("16.0.1.3");

@@ -13,7 +13,8 @@ static class AppSelectionChecks
         check(firstLogin.Contains("Invoke-Step 'TechLounge.Shiftd'") && firstLogin.Contains("Shiftd.exe") && firstLogin.Contains("-ArgumentList '/S'") && AppRecipes.NeedsPayload(RecommendedApps.Shiftd),"mandatory Shiftd uses its bundled payload and silent first-login installer even with no optional apps");
         check(BootOptimizer.FirstLogin(standard).Contains("TechLounge.Shiftd") && RecommendedApps.IncludedInIso("techlounge.shiftd"),"Boot Optimizer waits for Shiftd and it cannot be treated as an optional selection");
         var shortcutFixture=Path.Combine(root,"hatch-shortcut");Directory.CreateDirectory(shortcutFixture);
-        var shortcutScript=AppRecipes.HatchZipShortcut.Replace("[Environment]::GetFolderPath('Desktop')","(Join-Path $fixture desktop)");
+        var shortcutScript=AppRecipes.HatchZipShortcut.Replace("[Environment]::GetFolderPath('Programs')","(Join-Path $fixture programs)");
+        if(shortcutScript.Contains("[Environment]::GetFolderPath("))throw new Exception("Shortcut fixture must not resolve real user folders.");
         var shortcutResult=await new ProcessRunner(_=>{}).PowerShell("$fixture="+Policy.Ps(shortcutFixture)+"\n"+"""
             $env:LOCALAPPDATA=Join-Path $fixture local
             $desktop=Join-Path $fixture desktop;New-Item $desktop -ItemType Directory|Out-Null
@@ -21,7 +22,7 @@ static class AppSelectionChecks
             New-Item (Split-Path $exe) -ItemType Directory -Force|Out-Null;Set-Content $exe 'inert fixture, never executed'
             """+"\n"+shortcutScript+"\n"+shortcutScript+"\n"+"""
             $shell=New-Object -ComObject WScript.Shell
-            $path=Join-Path $desktop HatchZip.lnk;$link=$shell.CreateShortcut($path)
+            $path=Join-Path $fixture 'programs\HatchZip\HatchZip.lnk';$link=$shell.CreateShortcut($path)
             $target=$link.TargetPath;$icon=$link.IconLocation;$folder=$link.WorkingDirectory
             $link.TargetPath=Join-Path $fixture unrelated.exe;$link.Save()
             $before=(Get-FileHash $path).Hash

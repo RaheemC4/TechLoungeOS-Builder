@@ -4,6 +4,7 @@ static class NvidiaChecks
 {
     public static async Task Run(string root, Action<bool,string> check)
     {
+        await NvidiaAppChecks.Run(Path.Combine(root,"nvidia-app"),check);
         var folder=Path.Combine(root,"NVIDIA O'Brien 测试"); Directory.CreateDirectory(folder);
         var worker=Path.Combine(folder,"worker.ps1"); File.WriteAllText(worker,NvidiaSetup.Script,new System.Text.UTF8Encoding(true));
         var run=new ProcessRunner(_=>{});
@@ -22,9 +23,9 @@ static class NvidiaChecks
         var catalog="""
             function Get-NvidiaLookup($Type,$Parent){switch($Type){1{[pscustomobject]@{Name='GeForce';Value=1}}2{[pscustomobject]@{Name='RTX 40 Series';Value=127}}3{[pscustomobject]@{Name='NVIDIA GeForce RTX 4090';Value=995}}}}
             function Invoke-RestMethod {param($Uri,$TimeoutSec) [pscustomobject]@{IDS=@(
-              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='560.09';IsWHQL='1';DownloadURL='https://us.download.nvidia.com/old.exe'}},
-              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='560.10';IsWHQL='1';DownloadURL='https://us.download.nvidia.com/current.exe'}},
-              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='999.99';IsWHQL='0';DownloadURL='https://us.download.nvidia.com/beta.exe'}})}}
+              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='560.09';Success='1';IsBeta='0';IsWHQL='1';DownloadURL='https://us.download.nvidia.com/old.exe'}},
+              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='560.10';Success='1';IsBeta='0';IsWHQL='1';DownloadURL='https://us.download.nvidia.com/current.exe'}},
+              [pscustomobject]@{downloadInfo=[pscustomobject]@{Version='999.99';Success='1';IsBeta='1';IsWHQL='1';DownloadURL='https://us.download.nvidia.com/beta.exe'}})}}
             """;
         var latest=await run.PowerShell(prefix+catalog+"\n(Get-NvidiaRelease 'NVIDIA GeForce RTX 4090').Version");
         check(latest.Trim()=="560.10","NVIDIA lookup uses an exact live catalogue model and numeric newest WHQL version, excluding beta metadata");
@@ -41,12 +42,18 @@ static class NvidiaChecks
         check(normalized.Declaration!.Encoding=="utf-8" && normalized.Root!.Element("Profile")!.Element("ProfileName")!.Value=="_GLOBAL_DRIVER_PROFILE (Base Profile)" && File.ReadAllBytes(profile).SequenceEqual(original),"private profile normalization corrects mismatched encoding/global name and preserves the original supplied profile");
         var ready=Path.Combine(folder,"ready");Directory.CreateDirectory(ready); normalized.Save(profile);
         var model="""
+            function Ensure-NvidiaApp {param($State) Set-Content (Join-Path $State 'app-fixture-ready') 'inert verified App'}
             function Get-NvidiaDevices { [pscustomobject]@{Name='NVIDIA GeForce RTX 4090';PNPDeviceID='PCI\VEN_10DE&DEV_2684';DriverVersion='32.0.15.6094'} }
             function Get-NvidiaRelease { [pscustomobject]@{Version='560.00';DownloadURL='https://us.download.nvidia.com/current.exe'} }
-            function Get-CimInstance($ClassName){if($ClassName -eq 'Win32_OperatingSystem'){[pscustomobject]@{LastBootUpTime=[datetime]'2026-10-25T00:00:00Z'}}else{[pscustomobject]@{DeviceClass='DISPLAY';DeviceID='PCI\VEN_10DE&DEV_2684';IsSigned=$true;DriverProviderName='NVIDIA'}}}
+            function Get-CimInstance($ClassName){if($ClassName -eq 'Win32_OperatingSystem'){[pscustomobject]@{LastBootUpTime=[datetime]'2026-10-25T00:00:00Z'}}else{[pscustomobject]@{DeviceClass='DISPLAY';DeviceID='PCI\VEN_10DE&DEV_2684';IsSigned=$true;DriverProviderName='NVIDIA';DriverVersion='32.0.15.6094'}}}
             function Invoke-WebRequest { throw 'A newer installed driver must not download an older package' }
             """;
-        var import=prefix+model+"\nfunction Export-NvidiaProfile($Payload,$Destination){Copy-Item -LiteralPath (Join-Path $Payload 'TechLoungeProfile.nip') -Destination $Destination}; function Invoke-NvidiaProcess($Path,$Arguments){if($Arguments -notlike '-silentImport*'){throw 'Unexpected tool operation'};0}; Invoke-NvidiaProvisioning "+Policy.Ps(folder)+" "+Policy.Ps(ready);
+        foreach(var (label,signed) in new[]{("wrong-device",model.Replace("DeviceClass='DISPLAY';DeviceID='PCI\\VEN_10DE&DEV_2684'","DeviceClass='DISPLAY';DeviceID='PCI\\VEN_10DE&DEV_9999'")),("stale-signed-version",model.Replace("DriverProviderName='NVIDIA';DriverVersion='32.0.15.6094'","DriverProviderName='NVIDIA';DriverVersion='32.0.15.0000'"))}) {
+            var rejected=Path.Combine(folder,label);Directory.CreateDirectory(rejected);
+            try{await run.PowerShell(prefix+signed+"\nInvoke-NvidiaProvisioning "+Policy.Ps(folder)+" "+Policy.Ps(rejected));throw new Exception("Expected per-device driver rejection");}
+            catch(IOException ex)when(ex.Message.Contains("for every detected")){check(!File.Exists(Path.Combine(rejected,"app-fixture-ready"))&&!File.Exists(Path.Combine(rejected,"complete")),label+": an unrelated or stale signed driver cannot unlock NVIDIA App/profile installation");}
+        }
+        var import=prefix+model+"\nfunction Export-NvidiaProfile($Payload,$Destination){if(!(Test-Path (Join-Path (Split-Path $Destination) 'app-fixture-ready'))){throw 'Profile ran before NVIDIA App readiness'};Copy-Item -LiteralPath (Join-Path $Payload 'TechLoungeProfile.nip') -Destination $Destination}; function Invoke-NvidiaProcess($Path,$Arguments){if($Arguments -notlike '-silentImport*'){throw 'Unexpected tool operation'};0}; Invoke-NvidiaProvisioning "+Policy.Ps(folder)+" "+Policy.Ps(ready);
         await run.PowerShell(import);
         check(File.Exists(Path.Combine(ready,"complete")) && File.Exists(Path.Combine(ready,"before.nip")) && File.Exists(Path.Combine(ready,"after.nip")),"newer installed NVIDIA driver is retained and profile completion requires backup and exact settings readback");
         var mismatch=Path.Combine(folder,"mismatch");Directory.CreateDirectory(mismatch);

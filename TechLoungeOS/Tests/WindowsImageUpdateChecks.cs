@@ -38,7 +38,9 @@ static class WindowsImageUpdateChecks
             try{File.WriteAllText(Path.Combine(work,"windows-update",packages[0].File),"must not alter pinned checkpoint");}
             catch(IOException){locked=true;}
         };
-        var actual=await Apply(work,runner,plan);
+        WindowsImageUpdates.VerifiedHealthScan? reusableHealth=null;
+        var actual=await Apply(work,runner,plan,onVerified:health=>reusableHealth=health);
+        check(reusableHealth?.Take(Path.Combine(work,"mount"))=="No component store corruption detected.","only a successful update/preservation transaction hands its actual final full-scan result to the next servicing stage");
         check(actual==Target && runner.Signatures==2 && locked && ReadResult(work).GetProperty("preservationPassed").GetBoolean(),
             "verified payloads remain locked against mutation through update and readback, then an exact-version preservation pass is recorded");
         check(runner.AddArguments!.SequenceEqual(new[]{"/Image:"+Path.Combine(work,"mount"),"/Add-Package","/PackagePath:"+Path.Combine(work,"windows-update",packages[^1].File),"/PreventPending","/NoRestart"}),
@@ -52,12 +54,13 @@ static class WindowsImageUpdateChecks
             using var cancellation=new CancellationTokenSource();
             if(mode=="cancel")failing.OnAdd=cancellation.Cancel;
             var selected=mode=="checksum"?plan with{Packages=[packages[0] with{Sha256=new string('0',64)},packages[1]]}:plan;
-            try{await Apply(destination,failing,selected,cancellation.Token);throw new Exception("Expected failed update: "+mode);}
+            bool publishedHealth=false;
+            try{await Apply(destination,failing,selected,cancellation.Token,_=>publishedHealth=true);throw new Exception("Expected failed update: "+mode);}
             catch(Exception error) when(error is IOException or OperationCanceledException)
             {
                 var report=ReadResult(destination);
                 bool expectedApplied=mode is not "checksum" and not "signature" and not "health-before";
-                check(failing.Applied==expectedApplied && !report.GetProperty("preservationPassed").GetBoolean() && report.GetProperty("error").GetString()!.Length>0,
+                check(!publishedHealth && failing.Applied==expectedApplied && !report.GetProperty("preservationPassed").GetBoolean() && report.GetProperty("error").GetString()!.Length>0,
                     "update failure retained diagnostic evidence and never claimed preservation success: "+mode);
                 if(mode=="combined")
                 {
@@ -77,10 +80,10 @@ static class WindowsImageUpdateChecks
         try{WindowsImageUpdates.ReadPlan(root);throw new Exception("Unknown plan property accepted");}
         catch(JsonException){check(true,"unknown update-plan instructions are rejected rather than ignored or executed");}
 
-        Task<Version> Apply(string workspace,UpdateRunner commands,WindowsImageUpdates.Plan selected,CancellationToken ct=default) =>
+        Task<Version> Apply(string workspace,UpdateRunner commands,WindowsImageUpdates.Plan selected,CancellationToken ct=default,Action<WindowsImageUpdates.VerifiedHealthScan>? onVerified=null) =>
             WindowsImageUpdates.Apply(commands,Path.Combine(workspace,"mount"),workspace,folder,selected,Source,_=>{},ct,
                 _=>new Dictionary<string,string>{{"service:Kept",commands.Applied&&(commands.Failure is "services" or "combined")?"automatic":"disabled"}},
-                _=>commands.Applied&&commands.Failure is not "wrong-version" and not "pending"?Target:Source);
+                _=>commands.Applied&&commands.Failure is not "wrong-version" and not "pending"?Target:Source,verifiedHealth:onVerified);
     }
     private static JsonElement ReadResult(string work)
     {

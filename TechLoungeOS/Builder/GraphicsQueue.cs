@@ -22,7 +22,7 @@ public static class GraphicsQueue
         function Test-GraphicsAppsReady([string]$UserState){
           $appsRoot=Join-Path $env:ProgramData 'TechLoungeOS\BootOptimizer'
           . (Join-Path $appsRoot 'app-readiness.ps1')
-          if(!$UserState){$UserState=(Get-PostAppTarget).AppState}
+          if(!$UserState){$target=Get-PostAppTarget 'Graphics';if(!$target){return $false};$UserState=$target.AppState}
           $apps=Read-PostAppSelections (Join-Path $appsRoot 'apps.json')
           return (Test-PostAppReceipts $UserState $apps)
         }

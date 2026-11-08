@@ -1,0 +1,3 @@
+# Embedded scripts and raw string templates must retain identical checkout bytes.
+# Editors control text formatting; Git must not silently rewrite build inputs.
+* -text

@@ -11,6 +11,44 @@ static class GraphicsChecks
         var fixtureMount=Path.Combine(folder,"app-readiness");BootOptimizer.Stage(fixtureMount,["Vendor.Example"]);
         var common=Path.Combine(fixtureMount,"ProgramData");var appState=Path.Combine(folder,"user-state");Directory.CreateDirectory(appState);
         var guard=Path.Combine(folder,"driver-guard.ps1");File.WriteAllText(guard,GraphicsQueue.LockScript);
+        var profile=Path.Combine(folder,"signed-in-profile");
+        Directory.CreateDirectory(Path.Combine(profile,@"AppData\Local\TechLoungeOS"));
+        var systemReadiness=await run.PowerShell($$$$"""
+            $env:ProgramData={{{{Policy.Ps(common)}}}};$profile={{{{Policy.Ps(profile)}}}}
+            $appState=Join-Path $profile 'AppData\Local\TechLoungeOS'
+            . {{{{Policy.Ps(guard)}}}}
+            $global:interactive=$true;$global:loaded=$true;$global:linked=$false
+            function Get-CimInstance {param($ClassName,$Filter)
+              if($ClassName -eq 'Win32_Process'){if($global:interactive){[pscustomobject]@{Name='explorer.exe'}}}
+              elseif($ClassName -eq 'Win32_UserProfile'){[pscustomobject]@{Loaded=$global:loaded;Special=$false;LocalPath=$profile}}
+              else{throw 'Unexpected hardware inspection in the readiness fixture'}
+            }
+            function Invoke-CimMethod {param($InputObject,$MethodName)
+              if($MethodName -ne 'GetOwnerSid'){throw 'Unexpected method'}
+              [pscustomobject]@{ReturnValue=0;Sid='S-1-5-21-1-2-3-1001'}
+            }
+            function Test-Path {param($LiteralPath)
+              if($LiteralPath -like 'Registry::*'){return $true}
+              Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
+            }
+            function Get-Item {param($LiteralPath,[switch]$Force)
+              if($global:linked){[pscustomobject]@{Attributes=[IO.FileAttributes]::ReparsePoint}}
+              else{Microsoft.PowerShell.Management\Get-Item -LiteralPath $LiteralPath -Force}
+            }
+            $before=Test-GraphicsAppsReady
+            Set-Content (Join-Path $appState 'Vendor.Example.done') 'inert installed-app receipt'
+            $withoutBootRequest=Test-GraphicsAppsReady
+            $bootState=Join-Path $env:ProgramData 'TechLoungeOS\BootOptimizer\state\S-1-5-21-1-2-3-1001'
+            New-Item $bootState -ItemType Directory -Force|Out-Null
+            Set-Content (Join-Path $bootState complete) 'inert completed Boot Optimizer'
+            $afterBoot=Test-GraphicsAppsReady
+            $global:loaded=$false;$unloaded=Test-GraphicsAppsReady;$global:loaded=$true
+            $global:linked=$true;$rejected=$false;try{Test-GraphicsAppsReady|Out-Null}catch{$rejected=$_.Exception.Message -like '*Linked user profile*'}
+            $global:linked=$false;$global:interactive=$false;$noDesktop=Test-GraphicsAppsReady
+            ConvertTo-Json @($before,$withoutBootRequest,$afterBoot,$unloaded,$rejected,$noDesktop) -Compress
+            """);
+        check((JsonSerializer.Deserialize<bool[]>(systemReadiness.Trim())??[]).SequenceEqual(new[]{false,true,true,false,true,false}),
+            "SYSTEM graphics readiness waits for selected apps, works before a Boot Optimizer request and after its completion, and rejects unloaded/linked/absent interactive profiles");
         var ordering=$$"""
             $env:ProgramData={{Policy.Ps(common)}};$state={{Policy.Ps(appState)}}
             . {{Policy.Ps(guard)}}

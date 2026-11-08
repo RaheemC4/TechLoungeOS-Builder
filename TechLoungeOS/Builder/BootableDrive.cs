@@ -11,10 +11,10 @@ public record UsbDisk(int Number, string UniqueId, string SerialNumber, string P
     public string Label => $"{FriendlyName} · {Size / 1_000_000_000d:F1} GB"+(Volumes.Length==0?"":" · "+string.Join(", ",Volumes.Select(v=>v.TrimEnd(':')+":")));
 }
 public record MediaFile(string RelativePath, long Length, string Sha256);
-public record PreparedUsb(string Workspace, string Iso, string IsoSha256, MediaFile[] Files, long Bytes);
+public record PreparedUsb(string Workspace, string? Iso, string? IsoSha256, MediaFile[] Files, long Bytes);
 
 // Microsoft's FAT32 boot + optional NTFS data layout, retaining the source boot chain.
-public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
+public sealed partial class BootableDrive(ICommandRunner runner, Action<string> log)
 {
     public const long Fat32Limit = uint.MaxValue;
     public const long MaximumBootPartition = 31L * 1024 * 1024 * 1024;
@@ -35,13 +35,15 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
         if (required > Target16GbBytes) throw new IOException("The selected media exceeds the conservative 16 GB USB target. No components were silently removed. This build needs smaller installation payloads before it can fit.");
     }
     public static bool SeparateData(IReadOnlyList<MediaFile> files)=>files.Any(f=>f.Length>Fat32Limit);
+    public static bool SeparateData(UsbDisk disk,IReadOnlyList<MediaFile> files)=>NeedsFullDataVolume(disk)||SeparateData(files);
+    internal static bool NeedsFullDataVolume(UsbDisk disk)=>disk.Size>MaximumBootPartition+(32L<<20);
     public static MediaFile[] BootFiles(IReadOnlyList<MediaFile> files)=>files.Where(f=>
         f.RelativePath.StartsWith(@"boot\",StringComparison.OrdinalIgnoreCase) ||
         f.RelativePath.StartsWith(@"efi\",StringComparison.OrdinalIgnoreCase) ||
         new[]{"bootmgr","bootmgr.efi",@"sources\boot.wim"}.Contains(f.RelativePath,StringComparer.OrdinalIgnoreCase)).ToArray();
-    public static long BootPartitionBytes(IReadOnlyList<MediaFile> files)
+    public static long BootPartitionBytes(IReadOnlyList<MediaFile> files,bool force=false)
     {
-        if(!SeparateData(files))return 0;
+        if(!force&&!SeparateData(files))return 0;
         var boot=BootFiles(files);
         foreach(var required in new[]{"bootmgr",@"boot\bcd",@"boot\bootsect.exe",@"efi\boot\bootx64.efi",@"sources\boot.wim"})
             if(!boot.Any(f=>f.RelativePath.Equals(required,StringComparison.OrdinalIgnoreCase)))throw new IOException("Required USB boot file missing: "+required);
@@ -53,21 +55,23 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
     // Large ordinary WIMs are split during preparation; other large files need NTFS.
     public static long RequiredIsoUsbBytes(IReadOnlyList<MediaFile> files)=>checked(RequiredUsbBytes(files.Sum(f=>f.Length))+
         (files.Any(f=>f.Length>Fat32Limit&&!f.RelativePath.Equals(@"sources\install.wim",StringComparison.OrdinalIgnoreCase))?BootPartitionBytes(files):0));
-    internal static long ProjectedUsbBytes(string media,string replacedImage,string acceptedImage)
+    internal static long ProjectedUsbBytes(string media,string replacedImage,string acceptedImage,long? targetCapacity=null)
     {
         replacedImage=Path.GetFullPath(replacedImage);
         var files=Directory.EnumerateFiles(media,"*",SearchOption.AllDirectories).Where(f=>!Path.GetFullPath(f).Equals(replacedImage,StringComparison.OrdinalIgnoreCase))
             .Select(f=>new MediaFile(Path.GetRelativePath(media,f),new FileInfo(f).Length,""))
             .Append(new MediaFile(Path.Combine("sources","install"+Path.GetExtension(acceptedImage)),new FileInfo(acceptedImage).Length,"")).ToArray();
-        return RequiredIsoUsbBytes(files);
+        return targetCapacity>MaximumBootPartition+(32L<<20)
+            ?checked(RequiredUsbBytes(files.Sum(f=>f.Length))+BootPartitionBytes(files,true))
+            :RequiredIsoUsbBytes(files);
     }
     public static long PlannedBootPartition(UsbDisk disk,IReadOnlyList<MediaFile> files)
     {
         if(Rejection(disk) is { } reason)throw new IOException(reason);
-        var boot=BootPartitionBytes(files);
+        var boot=BootPartitionBytes(files,SeparateData(disk,files));
         if(boot==0)return PartitionBytes(disk,files.Sum(f=>f.Length));
         if(disk.Size>(2L<<40))throw new IOException("This BIOS-compatible boot/data layout supports USB drives up to2TiB. No drive was erased.");
-        if(boot>MaximumBootPartition || RequiredMediaBytes(files)>disk.Size)throw new IOException("The boot and data partitions do not fit this USB, including free-space headroom. No drive was erased.");
+        if(boot>MaximumBootPartition || checked(RequiredUsbBytes(files.Sum(f=>f.Length))+boot)>disk.Size)throw new IOException("The boot and data partitions do not fit this USB, including free-space headroom. No drive was erased.");
         return boot;
     }
     public static string? Rejection(UsbDisk d)
@@ -134,7 +138,7 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
         Directory.CreateDirectory(workspace);
         using var locked = new FileStream(Path.Combine(workspace,"operation.lock"),FileMode.CreateNew,FileAccess.Write,FileShare.None);
         var media=Path.Combine(workspace,"media"); Directory.CreateDirectory(media);
-        var sourceHash=Hash(iso); log("Preparing a private media copy before any drive is erased.");
+        var sourceHash=Hash(iso,ct); log("Preparing a private media copy before any drive is erased.");
         await runner.PowerShell($$"""
             $iso={{Policy.Ps(iso)}}; $disk=Get-DiskImage -ImagePath $iso -ErrorAction Stop; $owned=!$disk.Attached
             try {
@@ -145,6 +149,12 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
               if($LASTEXITCODE -ge 8){throw "ISO copy failed: $LASTEXITCODE"}
             } finally {if($owned){Dismount-DiskImage -ImagePath $iso -ErrorAction Stop|Out-Null} }
             """,ct);
+        return await PrepareFiles(workspace,disk,ct,iso,sourceHash);
+    }
+
+    private async Task<PreparedUsb> PrepareFiles(string workspace,UsbDisk disk,CancellationToken ct,string? iso=null,string? sourceHash=null)
+    {
+        var media=Path.Combine(workspace,"media");
         foreach(var required in new[]{@"efi\boot\bootx64.efi",@"sources\boot.wim","setup.exe","bootmgr",@"boot\bcd",@"boot\bootsect.exe"})
             if(!File.Exists(Path.Combine(media,required))) throw new IOException("Windows BIOS/UEFI setup file missing: "+required);
         await ValidateBootsect(media);
@@ -162,18 +172,22 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
             """,ct);
         var editions=JsonSerializer.Deserialize<int[]>(indices.Trim()) ?? [];
         if(editions.Length==0) throw new IOException("The installation image contains no editions.");
-        if(image==wim && new FileInfo(image).Length>Fat32Limit)
+        if(image==wim && new FileInfo(image).Length>Fat32Limit && !NeedsFullDataVolume(disk))
         {
             log("Splitting the installation image for FAT32. Source ISO is unchanged.");
+            if(iso is null)RecordSplitSource(workspace,wim);
             await runner.Dism("/Split-Image","/ImageFile:"+wim,"/SWMFile:"+Path.Combine(media,@"sources\install.swm"),"/FileSize:3800","/CheckIntegrity");
             var parts=Directory.GetFiles(Path.Combine(media,"sources"),"install*.swm");
             if(parts.Length==0) throw new IOException("DISM produced no split installation files.");
-            File.SetAttributes(wim,FileAttributes.Normal); File.Delete(wim);
+            File.SetAttributes(wim,FileAttributes.Normal);
+            if(iso is null)File.Move(wim,Path.Combine(workspace,"usb-source.wim"),false);
+            else File.Delete(wim);
         }
         ct.ThrowIfCancellationRequested();
+        log("Checking all prepared setup files before USB erase confirmation.");
         var files=Scan(media,ct); var bytes=files.Sum(f=>f.Length);
         PlannedBootPartition(disk,files);
-        if(Hash(iso)!=sourceHash) throw new IOException("The input ISO changed during preparation. No drive was erased.");
+        if(iso is not null && Hash(iso,ct)!=sourceHash) throw new IOException("The input ISO changed during preparation. No drive was erased.");
         var prepared=new PreparedUsb(workspace,iso,sourceHash,files,bytes);
         File.WriteAllText(Path.Combine(workspace,"prepared.json"),JsonSerializer.Serialize(prepared,new JsonSerializerOptions{WriteIndented=true}));
         return prepared;
@@ -189,13 +203,14 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
                 ct.ThrowIfCancellationRequested();
                 if((File.GetAttributes(file)&FileAttributes.ReparsePoint)!=0) throw new IOException("Linked media files are not supported.");
                 var size=new FileInfo(file).Length;
-                files.Add(new(Path.GetRelativePath(media,file),size,Hash(file)));
+                files.Add(new(Path.GetRelativePath(media,file),size,Hash(file,ct)));
             }
             foreach(var child in Directory.EnumerateDirectories(dir)) Visit(child);
         }
         Visit(media); if(files.Count==0) throw new IOException("Prepared media is empty."); return files.ToArray();
     }
-    public static string Hash(string file){using var s=File.OpenRead(file);return Convert.ToHexString(SHA256.HashData(s));}
+    public static string Hash(string file)=>Hash(file,CancellationToken.None);
+    internal static string Hash(string file,CancellationToken ct)=>UsbFileTransfer.Hash(file,ct,static _=>{});
 
     public static string VolumeLabel(string label)
     {
@@ -203,16 +218,16 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
         if(!Regex.IsMatch(label,@"\A[A-Z0-9 _-]{1,11}\z"))throw new IOException("Use a USB label of 1–11 letters, numbers, spaces, hyphens or underscores.");
         return label;
     }
-    public async Task Write(PreparedUsb prepared,UsbDisk selected,string confirmation,CancellationToken ct,string volumeLabel="TLOS_SETUP")
+    public async Task Write(PreparedUsb prepared,UsbDisk selected,string confirmation,CancellationToken ct,string volumeLabel="TLOS_SETUP",IProgress<UsbTransferProgress>? progress=null)
     {
         volumeLabel=VolumeLabel(volumeLabel);
         if(confirmation!=$"ERASE {selected.Number}") throw new IOException("Drive erase confirmation does not match the selected disk.");
         var current=(await List(ct)).SingleOrDefault(d=>d.Number==selected.Number) ?? throw new IOException("The selected USB drive disconnected.");
         SameDevice(selected,current);
         if(prepared.Bytes!=prepared.Files.Sum(f=>f.Length))throw new IOException("Prepared media byte count differs. Nothing was erased.");
-        var size=PlannedBootPartition(current,prepared.Files);var separate=SeparateData(prepared.Files);
-        foreach(var p in new[]{prepared.Workspace,prepared.Iso,AppContext.BaseDirectory})
-            if(current.Volumes.Contains(Path.GetPathRoot(Path.GetFullPath(p))![..1],StringComparer.OrdinalIgnoreCase)) throw new IOException("The target contains an input, working folder or application.");
+        var size=PlannedBootPartition(current,prepared.Files);var separate=SeparateData(current,prepared.Files);
+        foreach(var p in new[]{prepared.Workspace,prepared.Iso,AppContext.BaseDirectory}.Where(p=>p is not null))
+            if(current.Volumes.Contains(Path.GetPathRoot(Path.GetFullPath(p!))![..1],StringComparer.OrdinalIgnoreCase)) throw new IOException("The target contains an input, working folder or application.");
         var media=Path.Combine(prepared.Workspace,"media");
         var fresh=Scan(media,ct);
         if(!fresh.OrderBy(f=>f.RelativePath,StringComparer.OrdinalIgnoreCase).SequenceEqual(prepared.Files.OrderBy(f=>f.RelativePath,StringComparer.OrdinalIgnoreCase))) throw new IOException("Prepared media changed. Nothing was erased.");
@@ -235,22 +250,36 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
             if(separate)await runner.PowerShell(DataVolumeScript(current,volume),ct);
             var copies=prepared.Files.Select(f=>(File:f,Root:separate?volume.DataRoot!:volume.Root))
                 .Concat(separate?BootFiles(prepared.Files).Select(f=>(File:f,Root:volume.Root)):[]).ToArray();
+            var total=copies.Sum(c=>c.File.Length);long done=0;var reported=System.Diagnostics.Stopwatch.StartNew();
+            void Report(bool verifying,long bytes,bool force=false)
+            {
+                if(progress is null||(!force&&reported.ElapsedMilliseconds<500))return;
+                reported.Restart();progress.Report(new(verifying,bytes,total));
+            }
+            Report(false,0,true);
             foreach(var copy in copies)
             {
                 ct.ThrowIfCancellationRequested();
                 var dest=Path.Combine(copy.Root,copy.File.RelativePath); Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                File.Copy(Path.Combine(media,copy.File.RelativePath),dest,false); File.SetAttributes(dest,FileAttributes.Normal);
+                var before=done;
+                UsbFileTransfer.Copy(Path.Combine(media,copy.File.RelativePath),dest,copy.File.Length,ct,bytes=>Report(false,before+bytes));
+                File.SetAttributes(dest,FileAttributes.Normal);done+=copy.File.Length;
             }
+            Report(false,total,true);
             log("Verifying every file written to the USB drive.");
+            done=0;Report(true,0,true);
             foreach(var copy in copies)
             {
                 ct.ThrowIfCancellationRequested();
                 var dest=Path.Combine(copy.Root,copy.File.RelativePath);
-                if(new FileInfo(dest).Length!=copy.File.Length || Hash(dest)!=copy.File.Sha256) throw new IOException("USB verification failed: "+copy.File.RelativePath);
+                var before=done;
+                if(new FileInfo(dest).Length!=copy.File.Length || UsbFileTransfer.Hash(dest,ct,bytes=>Report(true,before+bytes))!=copy.File.Sha256) throw new IOException("USB verification failed: "+copy.File.RelativePath);
+                done+=copy.File.Length;
             }
+            Report(true,total,true);
             SameDevice(current,(await List(ct)).Single(d=>d.Number==current.Number));
-            if(separate)await runner.PowerShell(DataVolumeScript(current,volume),ct);
-            File.WriteAllText(Path.Combine(prepared.Workspace,"usb-complete.json"),JsonSerializer.Serialize(new{current,volume,files=prepared.Files.Length,bootCopies=copies.Length-prepared.Files.Length,verified=true}));
+            if(separate)await runner.PowerShell(HideBootScript(current,volume)+"\n"+DataVolumeScript(current,volume),ct);
+            File.WriteAllText(Path.Combine(prepared.Workspace,"usb-complete.json"),JsonSerializer.Serialize(new{current,volume,files=prepared.Files.Length,bootCopies=copies.Length-prepared.Files.Length,hiddenBoot=separate,verified=true}));
             File.AppendAllText(logPath,"All copied files verified. Use Windows Safely Remove Hardware before unplugging."+Environment.NewLine);
         }
         catch(Exception ex){File.AppendAllText(logPath,"Incomplete USB media: "+ex.Message+Environment.NewLine);throw;}
@@ -311,6 +340,21 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
         $v=Get-Volume -DriveLetter $letter -ErrorAction Stop
         if([string]$v.UniqueId -cne {{Policy.Ps(volume.DataRoot??"")}} -or [string]$v.FileSystem -ne 'NTFS'){throw 'USB data volume identity changed.'}
         """;
+    public static string HideBootScript(UsbDisk disk,WrittenVolume volume)=>$$"""
+        {{IdentityGuard(disk)}}
+        Assert-TechLoungeUsb (Get-Disk -Number {{disk.Number}} -ErrorAction Stop)
+        $bootLetter={{Policy.Ps(volume.DriveLetter)}}
+        $p=Get-Partition -DriveLetter $bootLetter -ErrorAction Stop
+        if(@($p).Count -ne 1 -or $p.DiskNumber -ne {{disk.Number}} -or !$p.IsActive -or $p.IsBoot -or $p.IsSystem){throw 'USB boot partition changed before hiding.'}
+        $v=Get-Volume -DriveLetter $bootLetter -ErrorAction Stop
+        if([string]$v.UniqueId -cne {{Policy.Ps(volume.Root)}} -or [string]$v.FileSystem -ne 'FAT32'){throw 'USB boot volume changed before hiding.'}
+        # Mark the existing FAT32 boot partition as an MBR EFI System Partition.
+        # Its native boot code stays active for BIOS; Windows leaves it unlettered.
+        $p|Remove-PartitionAccessPath -AccessPath "$($bootLetter):\" -ErrorAction Stop
+        Set-Partition -DiskNumber {{disk.Number}} -PartitionNumber $p.PartitionNumber -MbrType 239 -ErrorAction Stop
+        $check=Get-Partition -DiskNumber {{disk.Number}} -PartitionNumber $p.PartitionNumber -ErrorAction Stop
+        if([int]$check.MbrType -ne 239 -or !$check.IsActive -or [string]$check.DriveLetter -match '^[A-Za-z]$'){throw 'The small USB boot partition was not hidden as expected.'}
+        """;
     private static string IdentityGuard(UsbDisk disk) => $$"""
         function Assert-TechLoungeUsb($disk) {
           if([string]$disk.BusType -notin @('USB','7') -or $disk.IsBoot -or $disk.IsSystem -or $disk.IsOffline -or $disk.IsReadOnly -or
@@ -369,6 +413,7 @@ public sealed class BootableDrive(ICommandRunner runner, Action<string> log)
         {{(separateData?$$"""
         Assert-TechLoungeUsb (Get-Disk -Number {{disk.Number}} -ErrorAction Stop)
         $data=New-Partition -DiskNumber {{disk.Number}} -UseMaximumSize -AssignDriveLetter -ErrorAction Stop
+        if([long]$data.Size -lt {{disk.Size-partitionSize-(4L<<20)}}){throw 'The USB data partition did not use its available capacity.'}
         Assert-TechLoungeUsb (Get-Disk -Number {{disk.Number}} -ErrorAction Stop)
         $dataVolume=$data|Format-Volume -FileSystem NTFS -NewFileSystemLabel {{Policy.Ps(VolumeLabel(volumeLabel))}} -Force -Confirm:$false -ErrorAction Stop
         Assert-TechLoungeUsb (Get-Disk -Number {{disk.Number}} -ErrorAction Stop)

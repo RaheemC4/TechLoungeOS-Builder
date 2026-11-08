@@ -77,15 +77,17 @@ public static class DesktopSetup
         }
     }
 
-    public const string FirstLogin = """
-        Invoke-Step 'machine-setup' {
+    public static string FirstLogin => WaitFor("core-ready","machine-setup");
+    public static string OfficeFirstLogin => WaitFor("complete","office-install");
+    private static string WaitFor(string receipt,string name) => $$$"""
+        Invoke-Step '{{{name}}}' {
           $machine=Join-Path $env:ProgramData 'TechLoungeOS\MachineSetup'
           if(!(Test-Path -LiteralPath "$machine\queue-ready")){throw 'Windows setup registration is incomplete. Ask an administrator to review MachineSetup\queue.ps1. No elevation was requested.'}
-          if(!(Test-Path -LiteralPath "$machine\complete")){
+          if(!(Test-Path -LiteralPath "$machine\{{{receipt}}}")){
             $requested=[DateTime]::UtcNow
             Start-ScheduledTask -TaskName 'TechLoungeOS-MachineSetup' -ErrorAction Stop
             $timer=[Diagnostics.Stopwatch]::StartNew()
-            while(!(Test-Path -LiteralPath "$machine\complete")){
+            while(!(Test-Path -LiteralPath "$machine\{{{receipt}}}")){
               $path=Join-Path $machine 'status.json'
               if(Test-Path -LiteralPath $path){
                 $stream=[IO.FileStream]::new($path,'Open','Read',([IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete))
@@ -94,7 +96,7 @@ public static class DesktopSetup
                 if($status.phase -eq 'failed' -and ([DateTime]$status.updatedUtc).ToUniversalTime() -ge $requested){throw [string]$status.message}
               }
               if($timer.Elapsed.TotalSeconds -gt 5 -and (Get-ScheduledTask -TaskName 'TechLoungeOS-MachineSetup' -ErrorAction Stop).State -ne 'Running'){
-                if(!(Test-Path -LiteralPath "$machine\complete")){throw 'Required setup stopped before completion. Review MachineSetup\status.json and retry. Successful installers are retained.'}
+                if(!(Test-Path -LiteralPath "$machine\{{{receipt}}}")){throw 'Required setup stopped before completion. Review MachineSetup\status.json and retry. Successful installers are retained.'}
               }
               # Release only the observer after an hour. Never terminate an installer.
               if($timer.Elapsed.TotalMinutes -ge 60){throw 'An installer is still running. Your desktop remains available. Review setup progress before retrying; the installer was not stopped.'}
@@ -102,7 +104,7 @@ public static class DesktopSetup
             }
           }
         }
-        if(!(Test-Path -LiteralPath "$state\machine-setup.done")){Set-Content "$state\status.txt" $script:failures.ToArray();Write-SetupProgress '' ($script:failures -join [Environment]::NewLine) 'failed';exit 1}
+        if(!(Test-Path -LiteralPath "$state\{{{name}}}.done")){Set-Content "$state\status.txt" $script:failures.ToArray();Write-SetupProgress '' ($script:failures -join [Environment]::NewLine) 'failed';exit 1}
         """;
 
     public static void Stage(string mount, IEnumerable<Step> installers)

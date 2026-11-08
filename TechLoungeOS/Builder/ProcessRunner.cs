@@ -10,6 +10,13 @@ public interface ICommandRunner
     Task<string> Dism(params string[] args);
 }
 
+public sealed class NativeCommandException(string tool,int exitCode,string output) : IOException(
+    (exitCode is 433 or 1167 ? "Windows lost access to a required drive. Check its connection before trying again.\n\n" : "")+
+    $"{Path.GetFileName(tool)} failed ({exitCode}). {output}")
+{
+    public int ExitCode {get;}=exitCode;
+}
+
 public sealed class ProcessRunner(Action<string> log, string? scratchDirectory = null, string? dismPath = null) : ICommandRunner
 {
     public Task<string> Run(string exe, IEnumerable<string> args, CancellationToken ct = default) =>
@@ -31,6 +38,7 @@ public sealed class ProcessRunner(Action<string> log, string? scratchDirectory =
         }
         Write($"> {Path.GetFileName(exe)} " + (info.ArgumentList.Contains("-Command") ? "[PowerShell operation]" : string.Join(" ", info.ArgumentList)));
         using var process = Process.Start(info) ?? throw new IOException("Could not start " + exe);
+        var elapsed=Stopwatch.StartNew();
         async Task<string> Drain(StreamReader reader)
         {
             var output = new StringBuilder();
@@ -43,8 +51,9 @@ public sealed class ProcessRunner(Action<string> log, string? scratchDirectory =
         await process.WaitForExitAsync();
         var result = await stdout;
         var error = await stderr;
+        Write($"Command timing: {Path.GetFileName(exe)} took {elapsed.Elapsed.TotalSeconds:F3}s; exit {process.ExitCode}.");
         if (process.ExitCode != 0 && process.ExitCode != 3010)
-            throw new IOException($"{Path.GetFileName(exe)} failed ({process.ExitCode}). {error} {result}");
+            throw new NativeCommandException(exe,process.ExitCode,error+" "+result);
         if (loggingFailure != null) throw new IOException("The command finished, but its output could not be logged. Check disk space and access permissions; image recovery may be needed.", loggingFailure);
         ct.ThrowIfCancellationRequested();
         return result;

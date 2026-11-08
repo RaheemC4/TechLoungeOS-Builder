@@ -6,6 +6,9 @@ namespace TechLoungeOS;
 public static class DesktopDefaults
 {
     public static IReadOnlyList<RecommendedProfile.Setting> Settings {get;}=Array.AsReadOnly(new RecommendedProfile.Setting[]{
+        new("file_extensions_visible","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced","HideFileExt",0),
+        new("hidden_files_visible","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced","Hidden",1),
+        new("taskbar_end_task","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings","TaskbarEndTask",1),
         new("taskbar_left","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced","TaskbarAl",0),
         new("this_pc_hidden","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel","{20D04FE0-3AEA-1069-A2D8-08002B30309D}",1),
         new("this_pc_classic_hidden","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\ClassicStartMenu","{20D04FE0-3AEA-1069-A2D8-08002B30309D}",1),
@@ -14,6 +17,8 @@ public static class DesktopDefaults
         new("task_view_hidden","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced","ShowTaskViewButton",0),
         new("chat_hidden","User",@"Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced","TaskbarMn",0),
         new("transparency_off","User",@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize","EnableTransparency",0),
+        new("lock_screen_picture","User",@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager","RotatingLockScreenEnabled",0),
+        new("lock_screen_overlay_off","User",@"Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager","RotatingLockScreenOverlayEnabled",0),
         new("apps_dark","User",@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize","AppsUseLightTheme",0),
         new("windows_dark","User",@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize","SystemUsesLightTheme",0),
         new("internet_zone_launch","User",@"Software\Microsoft\Windows\CurrentVersion\Internet Settings\Zones\3","1806",0),

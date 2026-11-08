@@ -35,18 +35,17 @@ public static class Preflight
         if (options.WindowsUpdateFolder != null)
             workRequired += checked(WindowsImageUpdates.ReadPlan(options.WindowsUpdateFolder).Packages.Sum(p=>p.Bytes) * 2);
         if (options.UpdateWindows) workRequired += 40L << 30;
-        if (workspace.Name.Equals(output.Name, StringComparison.OrdinalIgnoreCase)) workRequired += outputRequired;
+        if (options.ExportIso && workspace.Name.Equals(output.Name, StringComparison.OrdinalIgnoreCase)) workRequired += outputRequired;
         Policy.ValidateStorage(workspace.DriveFormat, workspace.AvailableFreeSpace, workRequired, true);
-        Policy.ValidateStorage(output.DriveFormat, output.AvailableFreeSpace, outputRequired, false);
+        if(options.ExportIso)Policy.ValidateStorage(output.DriveFormat, output.AvailableFreeSpace, outputRequired, false);
         ProbeParent(options.Workspace);
-        ProbeParent(options.Output);
+        if(options.ExportIso)ProbeParent(options.Output);
     }
 
     private static void ProbeParent(string destination)
     {
         var parent = new DirectoryInfo(Path.GetDirectoryName(destination)!);
         while (!parent.Exists) parent = parent.Parent ?? throw new IOException("No accessible destination parent.");
-        var probe = Path.Combine(parent.FullName, ".techloungeos-write-" + Guid.NewGuid().ToString("N"));
-        using var file = new FileStream(probe, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1, FileOptions.DeleteOnClose);
+        WorkspaceStorage.ProbeDirectory(parent.FullName);
     }
 }

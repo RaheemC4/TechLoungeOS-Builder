@@ -10,6 +10,7 @@ public partial class MainWindow : Window
     private bool running;
     private string? exportedIso;
     private string? exportedChoices;
+    private string? exportedWorkspace,exportedHash;
     private string? UsbSource(bool exportedOnly) => exportedOnly
         ? File.Exists(exportedIso) && exportedChoices==BuildChoiceStamp()?exportedIso:null
         : File.Exists(IsoPath.Text)?IsoPath.Text:null;
@@ -43,14 +44,18 @@ public partial class MainWindow : Window
                 completed=null;source=UsbSource(false);
                 if(source is null || Editions.SelectedItem is not Edition){ShowStep(0);Status.Text="Choose the source ISO before building a new ISO copy.";return;}
             }
-            new BootDriveWindow(source,completed is null?BuildForUsb:null,completed is null?saveTo:null){Owner=this}.ShowDialog();
+            var usb=completed is not null&&exportedWorkspace is not null&&exportedHash is not null&&Directory.Exists(Path.Combine(exportedWorkspace,"media"))
+                ? BootDriveWindow.FromBuiltMedia(source,exportedWorkspace,exportedHash)
+                : new BootDriveWindow(source,completed is null?BuildForUsb:null,completed is null?saveTo:null);
+            usb.Owner=this;usb.ShowDialog();
         }
         catch(Exception ex){Status.Text="Could not open USB creation: "+ex.Message;}
         finally {SetBusy(false);}
     }
-    private void ShowExportReady(string path)
+    private void ShowExportReady(string path,string? workspace=null,string? hash=null)
     {
         exportedIso=path;
+        exportedWorkspace=workspace;exportedHash=hash;
         exportedChoices=BuildChoiceStamp();
         UsbOutputLabel.Text=Path.GetFileName(path);
         UsbOutputLabel.ToolTip=path;
@@ -236,23 +241,24 @@ public partial class MainWindow : Window
         }
         catch(Exception ex){ShowBuildError(ex);}
     }
-    private Task<bool> RunBuild(BuildOptions options)=>RunBuildCore(options,CancellationToken.None);
-    private async Task<bool> RunBuildCore(BuildOptions options,CancellationToken external,IProgress<string>? secondary=null)
+    private async Task RunBuildCore(BuildOptions options,CancellationToken external,IProgress<string>? secondary=null)
     {
         cancellation = CancellationTokenSource.CreateLinkedTokenSource(external); SetBusy(true); Status.Text = "Checking the selected files and build requirements…";
-        var success=false;
         var progress = new Progress<string>(phase=>{ShowBuildPhase(phase);secondary?.Report(Status.Text);});
         try
         {
             void Observe(string line){Write(line);if(secondary is MeasuredBuildProgress measured)measured.ObserveOutput(line);}
             await Task.Run(() => new BuildEngine(Observe, progress: progress).Build(options, cancellation.Token));
-            Status.Text = "ISO exported. VM installation validation is still required.";
-            ShowExportReady(options.Output);success=true;
+            Status.Text = options.ExportIso?"ISO exported. VM installation validation is still required.":"Your customised Windows files are ready for USB preparation.";
+            if(options.ExportIso)ShowExportReady(options.Output);
         }
-        catch (OperationCanceledException) { Status.Text = "Cancelled. Check build.log for cleanup results."; }
-        catch (Exception ex) { Status.Text = "Build failed: " + ex.Message; Write(ex.ToString()); }
-        finally { cancellation.Dispose(); cancellation = null; SetBusy(false); }
-        return success;
+        catch (OperationCanceledException) { Status.Text = "Cancelled. Check the diagnostic log for cleanup results."; throw; }
+        catch (Exception ex) { Status.Text = "Build failed: " + ex.Message; Write(ex.ToString()); throw; }
+        finally {
+            var office=Path.Combine(options.Workspace,"office-pack");
+            if(options.IncludeOffice&&File.Exists(Path.Combine(office,"TechLoungeOS-Office.sha256.json")))completedOfficeCache=office;
+            cancellation.Dispose(); cancellation = null; SetBusy(false);
+        }
     }
     private void ShowBuildError(Exception error)
     {

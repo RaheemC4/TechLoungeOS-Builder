@@ -18,8 +18,8 @@ namespace TechLoungeOS.FirstLogin
     {
         private readonly string state;
         private readonly Func<int> work;
-        private readonly Label heading, step, detail,brand,subtitle;
-        private readonly Button retry;
+        private readonly Label heading, step, detail,brand,subtitle,elapsed,notice;
+        private readonly Button retry,restart,finish;
         private readonly ProgressTrack track;
         private readonly System.Windows.Forms.Timer timer;
         private readonly NotifyIcon tray;
@@ -29,9 +29,11 @@ namespace TechLoungeOS.FirstLogin
         private Thread worker;
         private volatile bool running;
         private int result = 1;
-        private DateTime completed;
         private bool resourcesReleased;
         private readonly List<Font> ownedFonts = new List<Font>();
+        private readonly Stopwatch elapsedClock=new Stopwatch();
+        private Form activityWindow;
+        private readonly string[] plannedSteps;
 
         [DllImport("gdi32.dll")] private static extern IntPtr AddFontMemResourceEx(IntPtr data,uint length,IntPtr reserved,ref uint count);
         [DllImport("gdi32.dll")] private static extern bool RemoveFontMemResourceEx(IntPtr handle);
@@ -42,8 +44,9 @@ namespace TechLoungeOS.FirstLogin
         internal SetupProgress(string state,Func<int> work,bool startOnShown=true)
         {
             this.state=state;this.work=work;
+            plannedSteps=ReadPlan(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData),"TechLoungeOS","progress-plan.json"));
             Text="TechLoungeOS setup";ShowInTaskbar=true;StartPosition=FormStartPosition.CenterScreen;
-            ClientSize=new Size(620,390);MinimumSize=new Size(460,350);AutoScaleDimensions=new SizeF(96,96);AutoScaleMode=AutoScaleMode.Dpi;
+            ClientSize=new Size(620,470);MinimumSize=new Size(460,410);AutoScaleDimensions=new SizeF(96,96);AutoScaleMode=AutoScaleMode.Dpi;
             FormBorderStyle=SystemInformation.HighContrast?FormBorderStyle.FixedSingle:FormBorderStyle.None;
             DoubleBuffered=true;
             MaximizeBox=false;ShowIcon=true;Icon=Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
@@ -54,7 +57,7 @@ namespace TechLoungeOS.FirstLogin
             var layout=new TableLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(28,14,28,22),ColumnCount=1,RowCount=7,AutoScroll=true};
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute,38));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            foreach(float height in new[]{112f,18f,14f})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
+            foreach(float height in new[]{112f,30f,14f})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
             var caption=new TableLayoutPanel {Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};
@@ -77,10 +80,19 @@ namespace TechLoungeOS.FirstLogin
             track=new ProgressTrack {Dock=DockStyle.Fill,Margin=Padding.Empty};
             var actions=new FlowLayoutPanel {Dock=DockStyle.Fill,FlowDirection=FlowDirection.RightToLeft,WrapContents=true,Padding=new Padding(0,4,0,0),Margin=Padding.Empty};
             var hide=new SmoothButton {Text="Hide",Width=94,Primary=true};hide.Click+=delegate {if(running)Hide();else Close();};
+            finish=hide;
+            restart=new SmoothButton {Text="Restart now",Width=135,Visible=false,Primary=true};
+            restart.Click+=delegate {
+                if(running||result!=0)return;
+                try{Process.Start(new ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System),"shutdown.exe"),"/r /t 0"){UseShellExecute=false,CreateNoWindow=true});}
+                catch(Exception error){detail.Text="Could not request a restart: "+error.Message;}
+            };
             retry=new SmoothButton {Text="Retry setup",Width=125,Enabled=false,Visible=false,Primary=true};retry.Click+=delegate {StartWork();};
-            var logs=new SmoothButton {Text="View logs",Width=110};logs.Click+=delegate {try {Process.Start(new ProcessStartInfo("explorer.exe",Launcher.Quote(state)){UseShellExecute=true});}catch(Exception e){detail.Text=e.Message;}};
-            actions.Controls.Add(hide);actions.Controls.Add(retry);actions.Controls.Add(logs);
-            layout.Controls.Add(caption,0,0);layout.Controls.Add(titles,0,1);layout.Controls.Add(status,0,2);layout.Controls.Add(track,0,4);layout.Controls.Add(actions,0,6);Controls.Add(layout);
+            var logs=new SmoothButton {Text="View activity",Width=135};logs.Click+=delegate {ShowActivity();};
+            elapsed=new Label {Dock=DockStyle.Fill,ForeColor=Subtle,TextAlign=ContentAlignment.MiddleLeft,AutoEllipsis=true};
+            notice=new Label {Text="Keep this PC on and connected. Don’t shut down or restart until setup finishes.",Dock=DockStyle.Fill,ForeColor=Subtle,Padding=new Padding(0,10,0,0)};
+            actions.Controls.Add(hide);actions.Controls.Add(restart);actions.Controls.Add(retry);actions.Controls.Add(logs);
+            layout.Controls.Add(caption,0,0);layout.Controls.Add(titles,0,1);layout.Controls.Add(status,0,2);layout.Controls.Add(elapsed,0,3);layout.Controls.Add(track,0,4);layout.Controls.Add(notice,0,5);layout.Controls.Add(actions,0,6);Controls.Add(layout);
             tray=new NotifyIcon {Icon=Icon??SystemIcons.Application,Text="TechLoungeOS setup",Visible=false};
             tray.DoubleClick+=delegate {Show();WindowState=FormWindowState.Normal;Activate();};
             var menu=new ContextMenuStrip {Font=Face("Sora",9)};menu.Items.Add("Show setup progress",null,delegate {Show();WindowState=FormWindowState.Normal;Activate();});tray.ContextMenuStrip=menu;
@@ -130,15 +142,19 @@ namespace TechLoungeOS.FirstLogin
         private void StartWork()
         {
             if(running)return;
-            running=true;retry.Enabled=false;retry.Visible=false;completed=DateTime.MinValue;heading.Text="Finishing your setup";track.State=SetupProgressState.Working;
+            running=true;elapsedClock.Restart();restart.Visible=false;finish.Text="Hide";retry.Enabled=false;retry.Visible=false;heading.Text="Finishing your setup";track.State=SetupProgressState.Working;
+            notice.Text="Keep this PC on and connected. Don’t shut down or restart until setup finishes.";
             worker=new Thread(new ThreadStart(delegate {
                 int code;
                 try{code=work();}catch(Exception error){code=1;try{File.WriteAllText(Path.Combine(state,"bootstrap-status.txt"),error.Message);}catch(IOException){}catch(UnauthorizedAccessException){}}
                 try{if(!IsDisposed)BeginInvoke(new Action(delegate {
-                    result=code;running=false;retry.Enabled=code!=0;retry.Visible=code!=0;track.State=code==0?SetupProgressState.Complete:SetupProgressState.Attention;
+                    result=code;running=false;elapsedClock.Stop();retry.Enabled=code!=0;retry.Visible=code!=0;track.State=code==0?SetupProgressState.Complete:SetupProgressState.Attention;
+                    notice.Text=code==0?"Setup has finished. You can restart when convenient.":"Successful installs are retained. Review activity and retry the unfinished steps.";
                     heading.Text=code==0?"You’re ready":"Setup needs attention";
                     step.Text=code==0?"Your selected apps and settings are ready.":"Successful installs are saved. Retry the remaining steps.";
-                    if(code==0)completed=DateTime.UtcNow;else {Show();WindowState=FormWindowState.Normal;RefreshProgress();}
+                    finish.Text=code==0?"Done":"Hide";
+                    if(code!=0){Show();WindowState=FormWindowState.Normal;}
+                    RefreshProgress();
                 }));}catch(InvalidOperationException){}
             }));
             worker.IsBackground=false;worker.Name="TechLoungeOS first-start installer observer";worker.Start();
@@ -155,21 +171,78 @@ namespace TechLoungeOS.FirstLogin
 
         private void RefreshProgress()
         {
+            elapsed.Text="Elapsed "+elapsedClock.Elapsed.ToString(@"hh\:mm\:ss");
+            if(plannedSteps.Length>0){
+                int done=0;foreach(var id in plannedSteps)if(File.Exists(Path.Combine(state,id+".done")))done++;
+                elapsed.Text+=" · "+done+" of "+plannedSteps.Length+" setup steps completed";
+                track.Progress=(double)done/plannedSteps.Length;
+            }
             track.State=running?SetupProgressState.Working:result==0?SetupProgressState.Complete:SetupProgressState.Attention;
             try {
                 var status=ReadProgress(Path.Combine(state,"progress.json"));object value;
                 if(running && status.TryGetValue("step",out value))step.Text=Friendly(Convert.ToString(value));
                 if(status.TryGetValue("message",out value))detail.Text=Convert.ToString(value);
+                if(plannedSteps.Length==0&&status.TryGetValue("completed",out value))elapsed.Text+=" · "+Convert.ToString(value)+" setup tasks completed";
+                if(running && status.TryGetValue("stepStartedUtc",out value)){
+                    DateTime since;if(DateTime.TryParse(Convert.ToString(value),System.Globalization.CultureInfo.InvariantCulture,System.Globalization.DateTimeStyles.RoundtripKind,out since)){
+                        var duration=DateTime.UtcNow-since.ToUniversalTime();if(duration>=TimeSpan.Zero)elapsed.Text+=" · This task "+duration.ToString(@"hh\:mm\:ss");
+                    }
+                }
                 if(!running && result==0 && status.TryGetValue("phase",out value) && Convert.ToString(value)=="restart-needed"){
                     heading.Text="Restart when convenient";step.Text="Your apps are installed. Windows needs a normal restart.";
+                    restart.Visible=true;finish.Text="Later";
                 }
             }catch(IOException){}catch(UnauthorizedAccessException){}catch(ArgumentException){}catch(InvalidOperationException){}
-            if(completed!=DateTime.MinValue && (DateTime.UtcNow-completed).TotalSeconds>=8)Close();
         }
 
-        private static string Friendly(string id)
+        internal static string Friendly(string id)
         {
-            switch(id){case "Office":case "office":return "Microsoft 365";case "Runtimes":return "App and gaming runtimes";case "StoreXbox":return "Microsoft Store and Xbox";case "Edge":return "Microsoft Edge";case "Recovery":return "Windows recovery";case "LegacyNetwork":return "Network compatibility";case "TechLounge.DiscordOpenAsar":return "Discord";case "Brave.Brave":return "Brave";case "Google.Chrome":return "Google Chrome";case "Valve.Steam":return "Steam";case "Guru3D.Afterburner":return "MSI Afterburner";case "Stremio.Stremio":return "Stremio";case "Proton.ProtonVPN":return "Proton VPN";case "TechLounge.ChatGPT":return "ChatGPT";case "TechLounge.HatchZip":return "HatchZip";case "REALiX.HWiNFO":case "HWiNFO":return "HWiNFO64";case "machine-setup":return "Preparing required installers";default:return string.IsNullOrEmpty(id)?"Finishing your setup":id.Replace('-',' ');}
+            switch(id){case "lock-screen":return "Your lock-screen background";case "recommended-user":return "Your Recommended settings";case "recommended-machine":return "Recommended Windows settings";case "nvidia-setup":return "NVIDIA driver, App and profile";case "Office":case "office":return "Microsoft 365";case "Runtimes":return "App and gaming runtimes";case "StoreXbox":return "Microsoft Store and Xbox";case "Edge":return "Microsoft Edge";case "Recovery":return "Windows recovery";case "LegacyNetwork":return "Network compatibility";case "TechLounge.DiscordOpenAsar":return "Discord";case "Brave.Brave":return "Brave";case "Google.Chrome":return "Google Chrome";case "Valve.Steam":return "Steam";case "Guru3D.Afterburner":return "MSI Afterburner";case "Stremio.Stremio":return "Stremio";case "Proton.ProtonVPN":return "Proton VPN";case "TechLounge.ChatGPT":return "ChatGPT";case "TechLounge.HatchZip":return "HatchZip";case "REALiX.HWiNFO":case "HWiNFO":return "HWiNFO64";case "machine-setup":return "Preparing required installers";default:return string.IsNullOrEmpty(id)?"Finishing your setup":id.Replace('-',' ');}
+        }
+
+        private void ShowActivity()
+        {
+            if(activityWindow!=null&&!activityWindow.IsDisposed){activityWindow.Activate();return;}
+            var window=new Form {Text="TechLoungeOS setup activity",ClientSize=new Size(700,480),MinimumSize=new Size(500,340),StartPosition=FormStartPosition.CenterParent,BackColor=BackColor,ForeColor=ForeColor,Font=Font,ShowInTaskbar=false};
+            activityWindow=window;
+            var layout=new TableLayoutPanel {Dock=DockStyle.Fill,Padding=new Padding(20),ColumnCount=1,RowCount=4};
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,56));layout.RowStyles.Add(new RowStyle(SizeType.Percent,100));layout.RowStyles.Add(new RowStyle(SizeType.Absolute,42));
+            var summary=new Label {Dock=DockStyle.Fill,AutoSize=true,Font=step.Font,Margin=new Padding(0,0,0,8)};
+            var timing=new Label {Dock=DockStyle.Fill,ForeColor=Subtle};
+            var output=new TextBox {Dock=DockStyle.Fill,Multiline=true,ReadOnly=true,ScrollBars=ScrollBars.Vertical,BackColor=BackColor,ForeColor=ForeColor,BorderStyle=BorderStyle.FixedSingle};
+            var close=new SmoothButton {Text="Close activity",Width=150,Dock=DockStyle.Right};close.Click+=delegate {window.Close();};
+            layout.Controls.Add(summary,0,0);layout.Controls.Add(timing,0,1);layout.Controls.Add(output,0,2);layout.Controls.Add(close,0,3);window.Controls.Add(layout);
+            var refresh=new System.Windows.Forms.Timer {Interval=1000};
+            EventHandler update=delegate {
+                summary.Text=step.Text;timing.Text=elapsed.Text+Environment.NewLine+(running?"Keep this PC on. Installers continue when this activity window is closed.":notice.Text);
+                try{var text=ReadActivityTail(state);if(output.Text!=text){output.Text=text;output.SelectionStart=output.TextLength;output.ScrollToCaret();}}
+                catch(IOException error){output.Text="Activity is temporarily unavailable: "+error.Message;}catch(UnauthorizedAccessException error){output.Text=error.Message;}
+            };
+            refresh.Tick+=update;window.Shown+=delegate {update(null,EventArgs.Empty);refresh.Start();};window.FormClosed+=delegate {refresh.Dispose();activityWindow=null;};window.Show(this);
+        }
+
+        internal static string ReadActivityTail(string folder)
+        {
+            var parts=new List<string>();
+            foreach(var name in new[]{"first-login.log","bootstrap.log","status.txt","lock-screen-error.txt"}){
+                string path=Path.Combine(folder,name);if(!File.Exists(path))continue;
+                using(var input=new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.ReadWrite|FileShare.Delete)){
+                    bool tail=input.Length>24576;if(tail)input.Seek(-24576,SeekOrigin.End);
+                    using(var reader=new StreamReader(input)){if(tail)reader.ReadLine();parts.Add(name+Environment.NewLine+reader.ReadToEnd());}
+                }
+            }
+            return parts.Count==0?"Waiting for the first installer message. Current work is shown above.":string.Join(Environment.NewLine+Environment.NewLine,parts.ToArray());
+        }
+
+        internal static string[] ReadPlan(string path)
+        {
+            if(!File.Exists(path))return new string[0];
+            try{
+                var plan=ReadProgress(path);object raw;if(!plan.TryGetValue("steps",out raw))return new string[0];
+                var array=raw as System.Collections.IEnumerable;if(array==null)return new string[0];
+                var ids=new List<string>();foreach(var item in array){string id=item as string;if(id==null||!System.Text.RegularExpressions.Regex.IsMatch(id,@"\A[A-Za-z0-9][A-Za-z0-9._-]{0,199}\z")||ids.Contains(id)||ids.Count>=500)return new string[0];ids.Add(id);}
+                return ids.ToArray();
+            }catch(IOException){return new string[0];}catch(UnauthorizedAccessException){return new string[0];}catch(ArgumentException){return new string[0];}catch(InvalidOperationException){return new string[0];}
         }
 
         internal static int Run(string state,Func<int> work)

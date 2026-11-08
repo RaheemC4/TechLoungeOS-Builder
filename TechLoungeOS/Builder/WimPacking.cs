@@ -3,6 +3,13 @@ namespace TechLoungeOS;
 // Re-export the accepted updated image to omit obsolete WIM resources, without servicing its contents.
 internal static class WimPacking
 {
+    internal static bool Needed(BuildOptions options,long projectedBytes)
+    {
+        if(projectedBytes<0)throw new IOException("Invalid prepared media size.");
+        var limit=options.Target16GbUsb?BootableDrive.Target16GbBytes:long.MaxValue;
+        if(options.UsbTargetBytes is { } capacity)limit=Math.Min(limit,capacity);
+        return projectedBytes>limit;
+    }
     private static readonly Dictionary<string,string> Payloads=new(StringComparer.Ordinal)
     {
         ["wimlib-imagex.exe"]="34C0C4165591AD1F592837ED99D08273C58D6ED3FE0ED6360CF34E7B0739B353",
@@ -28,6 +35,8 @@ internal static class WimPacking
     internal static async Task<string> Compact(ICommandRunner run,string source,string workspace,Version expected,Action<string> log,CancellationToken ct)
     {
         ct.ThrowIfCancellationRequested();
+        var resources=BuildResources.CompressionPlan();
+        log($"Image compression: {resources.Threads} CPU threads, {resources.AvailableBytes/(double)(1L<<30):F1} GiB available RAM. The memory budget leaves headroom for Windows and other apps.");
         source=Path.GetFullPath(source);workspace=Path.GetFullPath(workspace);
         Policy.RequireUnlinkedPath(source);Policy.RequireUnlinkedPath(workspace);
         var packed=Path.Combine(workspace,"packed-install.esd");var tools=Path.Combine(workspace,"wim-packing-tools");
@@ -43,12 +52,12 @@ internal static class WimPacking
         // Keep the executable and its only non-system DLL immutable while the child runs.
         using(var executable=new FileStream(Path.Combine(tools,"wimlib-imagex.exe"),FileMode.Open,FileAccess.Read,FileShare.Read))
         using(var library=new FileStream(Path.Combine(tools,"libwim-15.dll"),FileMode.Open,FileAccess.Read,FileShare.Read))
-            await run.Run(Path.Combine(tools,"wimlib-imagex.exe"),["export",source,"1",packed,"--solid","--threads=2","--check"],ct);
+            await run.Run(Path.Combine(tools,"wimlib-imagex.exe"),["export",source,"1",packed,"--solid","--threads="+resources.Threads,"--check"],ct);
         ct.ThrowIfCancellationRequested();
         var metadata=(await run.PowerShell("[string](Get-WindowsImage -ImagePath "+Policy.Ps(packed)+" -Index 1).Version")).Trim();
         if(!File.Exists(packed)||new FileInfo(packed).Length==0||!Version.TryParse(metadata,out var actual)||actual!=expected)
             throw new IOException("Packed image readback differs from the accepted Windows version. No ISO was exported; the accepted image was retained.");
-        File.WriteAllText(Path.Combine(workspace,"image-packing.json"),System.Text.Json.JsonSerializer.Serialize(new{source,packed,before,after=new FileInfo(packed).Length,version=actual.ToString(),componentsRemoved=false,compression="solid LZMS, default64MiB chunks,2threads",tool="wimlib1.14.5"}));
+        File.WriteAllText(Path.Combine(workspace,"image-packing.json"),System.Text.Json.JsonSerializer.Serialize(new{source,packed,before,after=new FileInfo(packed).Length,version=actual.ToString(),componentsRemoved=false,compression="solid LZMS, default64MiB chunks",threads=resources.Threads,availableMemoryBytes=resources.AvailableBytes,tool="wimlib1.14.5"}));
         log("Compressed the updated installation image without changing its components.");return packed;
     }
 }

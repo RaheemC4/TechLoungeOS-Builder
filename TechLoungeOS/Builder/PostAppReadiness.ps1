@@ -1,6 +1,6 @@
 function Get-PostAppTarget([string]$Purpose) {
-  if($Purpose -notin @('BootOptimizer','PowerDefaults')){throw 'Unknown fixed post-install action'}
-  $root=Join-Path $env:ProgramData ('TechLoungeOS\'+$Purpose)
+  if($Purpose -notin @('BootOptimizer','PowerDefaults','Graphics')){throw 'Unknown fixed post-install action'}
+  $root=Join-Path $env:ProgramData ('TechLoungeOS\'+$(if($Purpose -eq 'Graphics'){'BootOptimizer'}else{$Purpose}))
   $apps=@(Read-PostAppSelections (Join-Path $root 'apps.json'))
   $owners=@(foreach($process in @(Get-CimInstance Win32_Process -Filter "Name='explorer.exe'")){
     $owner=Invoke-CimMethod -InputObject $process -MethodName GetOwnerSid
@@ -12,19 +12,24 @@ function Get-PostAppTarget([string]$Purpose) {
   $sid=[string]$ownerSid
   if($sid -notmatch '^S-1-(?:5-21|12-1)-\d+(?:-\d+)+$'){throw 'Unexpected interactive user SID'}
   $result=Join-Path $root ('state\'+$sid)
-  if(Test-Path -LiteralPath (Join-Path $result 'complete')){continue}
+  if($Purpose -ne 'Graphics' -and (Test-Path -LiteralPath (Join-Path $result 'complete'))){continue}
   $profiles=@(Get-CimInstance Win32_UserProfile -Filter "SID='$sid'"|Where-Object {$_.Loaded -and !$_.Special})
   if($profiles.Count -ne 1 -or !$profiles[0].LocalPath){continue}
   $profile=[IO.Path]::GetFullPath($profiles[0].LocalPath)
   $state=Join-Path $profile 'AppData\Local\TechLoungeOS'
   $request=Join-Path $state ('post-app-'+$Purpose+'.request')
-  if(!(Test-Path -LiteralPath $request)){continue}
+  if($Purpose -eq 'Graphics'){if(!(Test-Path -LiteralPath $state)){continue}}
+  elseif(!(Test-Path -LiteralPath $request)){continue}
   $part=$state
   while($part){
     if((Get-Item -LiteralPath $part -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked user profile paths are not supported by automatic Post-install setup'}
     $part=Split-Path $part
   }
   if(!(Test-Path -LiteralPath ('Registry::HKEY_USERS\'+$sid))){throw 'The interactive user registry hive is not loaded'}
+  if($Purpose -eq 'Graphics'){
+    if(Test-PostAppReceipts $state $apps){[pscustomobject]@{Sid=$sid;Profile=$profile;AppState=$state;RequestedUtc=[DateTime]::MinValue}}
+    continue
+  }
   $info=Get-Item -LiteralPath $request -Force
   if($info.PSIsContainer -or ($info.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Linked or invalid post-install request'}
   $input=[IO.File]::Open($request,'Open','Read','Read')
@@ -41,7 +46,7 @@ function Get-PostAppTarget([string]$Purpose) {
   # The SID comes from the process token/profile service, never from a caller-supplied target.
   [pscustomobject]@{Sid=$sid;Profile=$profile;AppState=$state;RequestedUtc=$info.LastWriteTimeUtc}
   })
-  if(!$ready.Count){throw 'No safely identified signed-in user has requested this action after completing their apps.'}
+  if(!$ready.Count){if($Purpose -eq 'Graphics'){return};throw 'No safely identified signed-in user has requested this action after completing their apps.'}
   $ready|Sort-Object RequestedUtc,Sid|Select-Object -First 1
 }
 function Read-PostAppSelections([string]$Path){

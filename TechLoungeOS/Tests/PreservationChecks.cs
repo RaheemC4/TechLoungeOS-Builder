@@ -89,6 +89,26 @@ static class PreservationChecks
                 (item.Succeeds || healthRunner.Commands.Any(c => c.Contains("/Discard"))),
                 item.Name + " preserves the source health boundary without repair or unsafe commit");
         }
+        foreach (var item in new[] {
+            (Name: "absent-app", Component: new Component("Appx", "Microsoft.BingNews"), AppAbsent: true, Disabled: false, Succeeds: true),
+            (Name: "disabled-feature", Component: new Component("Feature", "WorkFolders-Client"), AppAbsent: false, Disabled: true, Succeeds: true),
+            (Name: "enabled-feature", Component: new Component("Feature", "WorkFolders-Client"), AppAbsent: false, Disabled: false, Succeeds: false),
+            (Name: "missing-feature", Component: new Component("Feature", "Printing-XPSServices-Features"), AppAbsent: false, Disabled: false, Succeeds: true)
+        })
+        {
+            var noOp = options with { Index = 2, Workspace = Path.Combine(root, "repairable-" + item.Name),
+                Output = Path.Combine(root, "repairable-" + item.Name + ".iso"), Remove = [item.Component] };
+            var commands = new FixtureRunner(noOp.Workspace, healthResults: new Queue<string>([repairable, repairable]),
+                packageAbsent: item.AppAbsent, initiallyDisabledFeature: item.Disabled);
+            var completed = false;
+            try { await new BuildEngine(_ => { }, _ => commands, _ => new Dictionary<string,string>()).Build(noOp, CancellationToken.None); completed = true; }
+            catch (IOException) { }
+            check(completed == item.Succeeds && File.Exists(noOp.Output) == item.Succeeds &&
+                commands.Commands.Any(c => c.Contains("/Commit")) == item.Succeeds &&
+                !commands.Commands.Any(c => c.Contains("/Disable-Feature") || c.Contains("/Remove-ProvisionedAppxPackage") || c.Contains("/RestoreHealth")) &&
+                (item.Succeeds || commands.Commands.Any(c => c.Contains("/Discard"))),
+                "repairable source " + item.Name + " checks actual required changes without repairing or re-servicing absent components");
+        }
         var sourceXml = System.Xml.Linq.XElement.Parse("<IMAGE INDEX='1'><FILECOUNT>10</FILECOUNT><WINDOWS><ARCH>9</ARCH><EDITIONID>Professional</EDITIONID><VERSION><BUILD>26200</BUILD></VERSION></WINDOWS><NAME>Source Pro</NAME><FLAGS>Professional</FLAGS></IMAGE>");
         var captureXml = System.Xml.Linq.XElement.Parse("<IMAGE INDEX='1'><FILECOUNT>99</FILECOUNT><TOTALBYTES>1234</TOTALBYTES><WINDOWS><ARCH>9</ARCH><VERSION><BUILD>26100</BUILD></VERSION></WINDOWS><NAME>Capture</NAME><CUSTOM>retained</CUSTOM></IMAGE>");
         var restored = WimMetadata.CopyIdentity(sourceXml, captureXml);

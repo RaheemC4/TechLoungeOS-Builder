@@ -7,6 +7,17 @@ internal static class WimPackingChecks
         var root=Path.Combine(Path.GetTempPath(),"TLOS-packing-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
         try
         {
+            var choice=new BuildOptions("unused.iso",1,root,"unused-output.iso","unused-tool",[],[],false,false,null);
+            if(!WimPacking.Needed(choice,18_000_000_000) || WimPacking.Needed(choice,14_000_000_000) ||
+                WimPacking.Needed(choice with{Target16GbUsb=false,UsbTargetBytes=62_000_000_000},18_000_000_000) ||
+                !WimPacking.Needed(choice with{Target16GbUsb=false,UsbTargetBytes=16_000_000_000},18_000_000_000) ||
+                !WimPacking.Needed(choice with{UsbTargetBytes=62_000_000_000},18_000_000_000))
+                throw new Exception("Packing must depend on actual capacity while saved ISOs retain their conservative target.");
+            if(BuildResources.CompressionThreads(16,16UL<<30)!=8||BuildResources.CompressionThreads(16,4UL<<30)!=2||
+                BuildResources.CompressionThreads(1,16UL<<30)!=1||BuildResources.CompressionThreads(32,2UL<<30)!=1)
+                throw new Exception("Compression must respect CPU count, low-memory limits and the eight-thread ceiling.");
+            try{BuildResources.CompressionThreads(16,(1UL<<30)-1);throw new Exception("Insufficient free RAM accepted");}
+            catch(IOException){ }
             var source=Path.Combine(root,"selected.wim");File.WriteAllText(source,"accepted input remains unchanged");
             var media=Path.Combine(root,"media");Directory.CreateDirectory(Path.Combine(media,"sources"));
             var oldImage=Path.Combine(media,@"sources\install.wim");File.WriteAllBytes(oldImage,new byte[3]);File.WriteAllBytes(Path.Combine(media,"office.dat"),new byte[2]);
@@ -35,7 +46,8 @@ internal static class WimPackingChecks
         internal int Exports;internal bool WrongVersion;
         public async Task<string> Run(string exe,IEnumerable<string> args,CancellationToken ct=default)
         {
-            if(Path.GetFileName(exe)!="wimlib-imagex.exe" || !args.SequenceEqual(new[]{"export",source,"1",destination,"--solid","--threads=2","--check"}))throw new Exception("Unexpected packing operation.");
+            var values=args.ToArray();
+            if(Path.GetFileName(exe)!="wimlib-imagex.exe" || values.Length!=7 || !values.Take(5).SequenceEqual(new[]{"export",source,"1",destination,"--solid"})||!System.Text.RegularExpressions.Regex.IsMatch(values[5],"^--threads=[1-8]$")||values[6]!="--check")throw new Exception("Unexpected packing operation.");
             foreach(var name in new[]{"wimlib-imagex.exe","libwim-15.dll"})
             {
                 try{using var overwrite=new FileStream(Path.Combine(Path.GetDirectoryName(exe)!,name),FileMode.Open,FileAccess.Write,FileShare.ReadWrite);throw new Exception("Compressor changed while executing.");}

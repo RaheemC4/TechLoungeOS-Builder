@@ -88,13 +88,26 @@ public static class SetupAnswerFile
     }
     // These inert templates contain no credentials. The native wizard fills them in
     // on the WinPE RAM drive only, after the user explicitly chooses an account.
-    public static string Template(bool automaticSignin,string? source=null,SetupRegional? regional=null)
+    public static string Template(bool automaticSignin,string? source=null,SetupRegional? regional=null,string? initialWallpaper=null)
     {
         const string user="TLOS_USER_7D91",pc="TLOS-PC-7D91";
         if(source!=null && new[]{user,pc,"TLOS_PASSWORD_7D91","TLOS_AUTO_PASSWORD_7D91","TLOS_HELLO_7D91"}.Any(token=>source.Contains(token,StringComparison.Ordinal)))
             throw new IOException("Source answer file collides with account template markers.");
         var document=Create(new Account(user,pc,"",true),source,true);
         if(regional!=null)ApplyRegional(document,regional);
+        if(initialWallpaper!=null) {
+            if(!System.Text.RegularExpressions.Regex.IsMatch(initialWallpaper,@"\A%WINDIR%\\Web\\Wallpaper\\TechLoungeOS\\first-desktop\.(png|jpg|jpeg|bmp)\z"))
+                throw new IOException("Unsupported initial wallpaper path.");
+            foreach(var pass in new[]{"specialize","oobeSystem"}) {
+                var component=Shell(document,pass);
+                var themes=component.Elements(Namespace+"Themes").ToArray();
+                if(themes.Length>1)throw new IOException("Ambiguous source theme settings.");
+                var theme=themes.SingleOrDefault()??new XElement(Namespace+"Themes");
+                if(theme.Parent==null)component.Add(theme);
+                theme.Elements(Namespace+"CustomDefaultThemeFile").Remove();
+                Set(theme,"ThemeName","TechLoungeOS");Set(theme,"DesktopBackground",initialWallpaper);
+            }
+        }
         // An explicit answer file without a ProductKey instruction can stop
         // Windows Setup before edition selection. Keep its normal key/skip UI;
         // never replace an inherited installation key or add an activation key.
@@ -112,7 +125,9 @@ public static class SetupAnswerFile
             shell.Add(new XElement(Namespace+"AutoLogon",
                 new XElement(Namespace+"Password",new XElement(Namespace+"Value","TLOS_AUTO_PASSWORD_7D91"),new XElement(Namespace+"PlainText","false")),
                 new XElement(Namespace+"Username",user),new XElement(Namespace+"Enabled","true"),new XElement(Namespace+"LogonCount","2")));
-        else shell.Add(new XElement(Namespace+"AutoLogon",new XElement(Namespace+"Enabled","false"),new XElement(Namespace+"LogonCount","0"),new XElement(Namespace+"Username",user)));
+        // Setup validates LogonCount even when automatic sign-in is disabled.
+        // Manual sign-in must not carry an active-logon count or account credential settings.
+        else shell.Add(new XElement(Namespace+"AutoLogon",new XElement(Namespace+"Enabled","false")));
         var lists=shell.Elements(Namespace+"FirstLogonCommands").ToArray();
         if(lists.Length>1)throw new IOException("Ambiguous source first-sign-in commands.");
         var commands=lists.SingleOrDefault()??new XElement(Namespace+"FirstLogonCommands");

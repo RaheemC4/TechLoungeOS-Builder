@@ -18,6 +18,7 @@ internal record ActivityEntry(DateTimeOffset Time,string Title,string Detail,str
         else if(text.StartsWith("Preparing and checking the media"))entry=("Checking your installation files","Preparing the files and checking that they will fit. The USB has not been changed.","Working","\uE895");
         else if(text.StartsWith("Building your customisations"))entry=("Creating your Windows installer","Adding your chosen apps, desktop and setup settings before preparing the USB.","Working","\uE895");
         else if(text.StartsWith("Creating the confirmed USB"))entry=("Writing your setup USB","Copying the checked files. Keep the drive connected until verification finishes.","Working","\uE895");
+        else if(text.StartsWith("Verifying every file written"))entry=("Checking your setup USB","Reading back every copied file to check that the USB is complete.","Working","\uE895");
         else if(text.StartsWith("Setup drive files verified"))entry=("Your USB is ready","The copied files passed verification. Safely eject it before using it on your other PC.","Done","\uE73E");
         else if(text.StartsWith("Stopped safely")||text.StartsWith("The USB may be incomplete"))entry=("USB creation stopped",text,"Stopped","\uE711");
         else if(text.StartsWith("Reading Windows editions"))entry=("Reading your Windows image","Looking for the Windows editions available in your ISO.","Working","\uE895");
@@ -41,6 +42,7 @@ internal record ActivityEntry(DateTimeOffset Time,string Title,string Detail,str
                 "Exporting selected edition"=>("Preparing your Windows edition","Preparing the edition you selected for customisation."),
                 "Mounting image"=>("Opening the Windows image","Opening Windows offline so your changes can be applied."),
                 "Downloading and verifying offline Office payload"=>("Downloading Microsoft 365","Getting and checking the Office files for installation after Windows starts."),
+                "Downloading and verifying build prerequisites"=>("Getting required setup files","Preparing and checking your apps and shared components together, with fewer jobs on low-memory PCs."),
                 "Preparing the required Microsoft build component"=>("Preparing build tools","Getting and verifying the small Microsoft component used to create your installer."),
                 "Downloading and verifying offline runtime installers"=>("Preparing app and game runtimes","Getting shared components that many apps and games need."),
                 "Downloading and verifying offline Microsoft Edge"=>("Downloading Microsoft Edge","Getting the browser installer and checking its authenticity."),

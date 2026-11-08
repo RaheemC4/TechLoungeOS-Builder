@@ -18,7 +18,7 @@ internal static class IsoMediaVerification
                 Policy.RequireUnlinkedPath(file);
                 SourcePreservation.RequireImageFile(file, 0, long.MaxValue);
                 var relative = Path.GetRelativePath(media, file);
-                result.Add(relative, new(relative, new FileInfo(file).Length, BootableDrive.Hash(file)));
+                result.Add(relative, new(relative, new FileInfo(file).Length, BootableDrive.Hash(file,ct)));
             }
             foreach (var child in Directory.EnumerateDirectories(folder)) Visit(child);
         }
@@ -92,7 +92,13 @@ internal static class IsoMediaVerification
                 $relative = $absolute.Substring($basePath.Length)
                 if (!$expectedFiles.ContainsKey($relative)) { throw ('Unexpected exported file: ' + $relative) }
                 $expected = $expectedFiles[$relative]
-                if ($file.Length -ne $expected.Length -or (Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256).Hash -ne $expected.Sha256) { throw ('Exported file failed its size/checksum verification: ' + $relative) }
+                if ($file.Length -ne $expected.Length) { throw ('Exported file failed its size/checksum verification: ' + $relative) }
+                # Buffer large image/installer reads without allocating a large
+                # buffer for every tiny setup file. Every byte still gets hashed.
+                $readBuffer=if($file.Length -ge 16MB){1048576}else{4096}
+                $hashStream=[IO.FileStream]::new($file.FullName,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read,$readBuffer,[IO.FileOptions]::SequentialScan)
+                try {$actualHash=(Get-FileHash -InputStream $hashStream -Algorithm SHA256).Hash} finally {$hashStream.Dispose()}
+                if ($actualHash -ne $expected.Sha256) { throw ('Exported file failed its size/checksum verification: ' + $relative) }
                 $verifiedFiles++
                 $verifiedBytes += $file.Length
                 $expectedFiles.Remove($relative) | Out-Null

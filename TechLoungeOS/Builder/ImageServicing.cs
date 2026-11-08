@@ -31,7 +31,7 @@ public static class ImageServicing
         return result.ToArray();
     }
 
-    public static async Task Run(ICommandRunner run, string mount, BuildOptions options, Action<string> log, CancellationToken ct, Func<string, IReadOnlyDictionary<string, string>>? serviceReader = null)
+    public static async Task Run(ICommandRunner run, string mount, BuildOptions options, Action<string> log, CancellationToken ct, Func<string, IReadOnlyDictionary<string, string>>? serviceReader = null,WindowsImageUpdates.VerifiedHealthScan? verifiedInitialHealth=null)
     {
         ct.ThrowIfCancellationRequested();
         if (options.Remove.Any(c => !Policy.CanRemove(c)) || !Policy.ValidApps(options.Apps))
@@ -51,11 +51,19 @@ public static class ImageServicing
         File.WriteAllText(Path.Combine(options.Workspace, "appx-before.json"), JsonSerializer.Serialize(packages));
         File.WriteAllText(Path.Combine(options.Workspace, "features-before.json"), JsonSerializer.Serialize(features));
         ct.ThrowIfCancellationRequested();
-        var healthBefore = await run.Dism("/Image:" + mount, "/Cleanup-Image", "/ScanHealth");
+        // Only the same build's completed update pass hands off this full scan.
+        // Component removals and the final post-provisioning scan still run below.
+        var healthBefore = verifiedInitialHealth?.Take(mount) ?? await run.Dism("/Image:" + mount, "/Cleanup-Image", "/ScanHealth");
+        if(verifiedInitialHealth is not null)log("Reusing the full health scan just completed by this image's verified update transaction.");
         File.WriteAllText(Path.Combine(options.Workspace, "health-before.txt"), healthBefore);
         ct.ThrowIfCancellationRequested();
         var inheritedRepairable = RepairableHealth(healthBefore);
-        if (inheritedRepairable && options.Remove.Length != 0)
+        if(verifiedInitialHealth is not null && inheritedRepairable)
+            throw new IOException("The verified update health handoff was not healthy. The image will not be committed.");
+        var pending = options.Remove.Distinct().Where(c => c.Kind == "Appx"
+            ? packages.Any(p => p.DisplayName == c.Name)
+            : features.Any(f => f.FeatureName == c.Name && !f.State.StartsWith("Disabled", StringComparison.OrdinalIgnoreCase))).ToHashSet();
+        if (inheritedRepairable && pending.Count != 0)
             throw new IOException("The source already has a repairable component store. Deselect component removals to preserve it and add apps/settings only. Automatic repair could restore intentionally stripped components.");
         if (inheritedRepairable)
             log("Source health warning: the component store is already repairable. Preserving it without repair; only file-based setup and first-login payloads are allowed. This does not certify source health or update compatibility.");
@@ -64,21 +72,22 @@ public static class ImageServicing
         foreach (var component in options.Remove.Distinct())
         {
             ct.ThrowIfCancellationRequested();
+            if (!pending.Contains(component))
+            {
+                log("Already absent or disabled: " + component.Name);
+                continue;
+            }
             if (component.Kind == "Appx")
             {
                 var names = packages.Where(p => p.DisplayName == component.Name).Select(p => p.PackageName).ToArray();
-                if (names.Length == 0) log("Already absent: " + component.Name);
                 foreach (var name in names)
                 {
                     if (!Regex.IsMatch(name, @"^[A-Za-z0-9_.~\-]+$")) throw new InvalidDataException("Invalid package identity.");
                     await run.Dism("/Image:" + mount, "/Remove-ProvisionedAppxPackage", "/PackageName:" + name);
                 }
             }
-            else if (features.Any(f => f.FeatureName == component.Name))
-                await run.Dism("/Image:" + mount, "/Disable-Feature", "/FeatureName:" + component.Name, "/NoRestart");
-            else log("Already absent: " + component.Name);
+            else await run.Dism("/Image:" + mount, "/Disable-Feature", "/FeatureName:" + component.Name, "/NoRestart");
         }
-        ct.ThrowIfCancellationRequested();
         ct.ThrowIfCancellationRequested();
         var afterPackages = Packages(await run.Dism("/Image:" + mount, "/Get-ProvisionedAppxPackages"));
         ct.ThrowIfCancellationRequested();

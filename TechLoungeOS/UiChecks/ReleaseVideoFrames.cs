@@ -21,7 +21,10 @@ internal static class ReleaseVideoFrames
                 var editions=captured.RootElement.GetProperty("editions").Deserialize<Edition[]>()??throw new IOException("Missing observed editions");
                 ((TextBlock)window.FindName("IsoPath")).Text=captured.RootElement.GetProperty("path").GetString();
                 ((ComboBox)window.FindName("Editions")).ItemsSource=editions;((ComboBox)window.FindName("Editions")).SelectedIndex=0;
+                ((TextBlock)window.FindName("Status")).Text=$"Found {editions.Length} Windows editions. Choose one to customise.";
             }
+            ((RadioButton)window.FindName("ComponentsStep")).IsChecked=true;
+            Render(window,"components.png");
             ((RadioButton)window.FindName("AppsStep")).IsChecked=true;
             Render(window,"apps-before.png");
             ((System.Windows.Controls.Primitives.ToggleButton)window.FindName("RecommendedPresetButton")).IsChecked=true;

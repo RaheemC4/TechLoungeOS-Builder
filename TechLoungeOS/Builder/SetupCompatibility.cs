@@ -11,7 +11,11 @@ public static class SetupCompatibility
     public static IReadOnlyList<string> Names { get; } = Array.AsReadOnly(new[] { "BypassTPMCheck", "BypassSecureBootCheck", "BypassRAMCheck" });
     private record BootEntry(int ImageIndex, string Architecture, string Version);
 
-    public static async Task Prepare(ICommandRunner run, string media, string work, Action<string> log, CancellationToken ct)
+    internal record BackgroundPlan(int Index,Func<string,IReadOnlyDictionary<string,string>> Stage,Action<string,string> VerifySaved);
+    public static Task Prepare(ICommandRunner run,string media,string work,Action<string> log,CancellationToken ct)=>PrepareCore(run,media,work,log,ct,null);
+    internal static Task PrepareWithBackground(ICommandRunner run,string media,string work,Action<string> log,CancellationToken ct,BackgroundPlan background)=>PrepareCore(run,media,work,log,ct,background);
+
+    private static async Task PrepareCore(ICommandRunner run, string media, string work, Action<string> log, CancellationToken ct,BackgroundPlan? background)
     {
         var source = Path.Combine(media, @"sources\boot.wim");
         Policy.RequireUnlinkedPath(source);
@@ -26,8 +30,9 @@ public static class SetupCompatibility
         if (entries.Length is < 1 or > 32 || entries.Select(e => e.ImageIndex).Distinct().Count() != entries.Length ||
             entries.Any(e => e.ImageIndex < 1 || e.Architecture is not "0" and not "9" || !Version.TryParse(e.Version, out var v) || v.Major < 6))
             throw new IOException("Windows Setup compatibility needs readable Windows PE image metadata. No boot image was replaced.");
+        if(background is not null&&!entries.Any(e=>e.ImageIndex==background.Index))throw new IOException("The selected WinPE boot image is missing from the compatibility inventory.");
         var candidate = Path.Combine(work, "setup-compatibility-boot.wim");
-        var backup = Path.Combine(work, "setup-compatibility-original-boot.wim");
+        var backup = Path.Combine(work,background is null?"setup-compatibility-original-boot.wim":"source-boot.wim");
         if (File.Exists(candidate) || File.Exists(backup)) throw new IOException("An existing Setup compatibility transaction needs review.");
         File.Copy(source, candidate, false); File.SetAttributes(candidate, FileAttributes.Normal);
         var receipts = new List<object>();
@@ -47,12 +52,24 @@ public static class SetupCompatibility
                 var hive = Path.Combine(mount, @"Windows\System32\config\SYSTEM");
                 var previous = BootableDrive.Hash(hive);
                 ApplyHive(hive, Version.Parse(entry.Version));
+                var expected=background is null?new Dictionary<string,string>(StringComparer.OrdinalIgnoreCase):WinPeArtwork.Stage(mount,Path.Combine(work,"pe-artwork-"+entry.ImageIndex));
+                if(background?.Index==entry.ImageIndex)foreach(var file in background.Stage(mount))expected.Add(file.Key,file.Value);
+                if(expected.Keys.Any(p=>!WinPeArtwork.IsPicture(p)&&!p.Equals(@"Windows\System32\winpeshl.ini",StringComparison.OrdinalIgnoreCase)&&!p.StartsWith(@"Windows\System32\TechLoungeOS\",StringComparison.OrdinalIgnoreCase)))
+                    throw new IOException("Unexpected file in the WinPE interface plan.");
                 SourcePreservation.VerifyServices(services, SourcePreservation.CaptureServices(mount));
+                var values=ReadValues(hive);
+                if(Names.Any(n=>!values.TryGetValue(n,out var value)||value!=1))throw new IOException("WinPE interface preparation lost a required Setup compatibility value.");
                 var after = WinPeBackground.Snapshot(mount, ct);
                 const string allowed = @"Windows\System32\config\SYSTEM";
-                if (before.Count != after.Count || before.Any(p => !after.TryGetValue(p.Key, out var hash) || (!p.Key.Equals(allowed, StringComparison.OrdinalIgnoreCase) && p.Value != hash)))
+                if (before.Any(p => !after.TryGetValue(p.Key, out var hash) || (!p.Key.Equals(allowed, StringComparison.OrdinalIgnoreCase) && !expected.ContainsKey(p.Key) && p.Value != hash)))
                     throw new IOException("Setup compatibility changed an unrelated WinPE file. The source boot image was retained.");
-                receipts.Add(new { index = entry.ImageIndex, before = previous, after = BootableDrive.Hash(hive), values = ReadValues(hive), originalFilesPreserved = before.Count - 1, servicesPreserved = services.Count });
+                var added=after.Keys.Except(before.Keys,StringComparer.OrdinalIgnoreCase).ToArray();
+                if(expected.Any(p=>!after.TryGetValue(p.Key,out var hash)||hash!=p.Value)||
+                    !added.Order(StringComparer.OrdinalIgnoreCase).SequenceEqual(expected.Keys.Except(before.Keys,StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase),StringComparer.OrdinalIgnoreCase))
+                    throw new IOException("WinPE preparation added unexpected files or changed its interface payload.");
+                if(background?.Index==entry.ImageIndex)
+                    File.WriteAllText(Path.Combine(work,"pe-preservation.json"),JsonSerializer.Serialize(new{before,after,added,changed=expected.Keys.Append(allowed).Where(before.ContainsKey),compatibilityIncluded=true,servicesPreserved=services.Count},new JsonSerializerOptions{WriteIndented=true}));
+                receipts.Add(new { index = entry.ImageIndex, before = previous, after = BootableDrive.Hash(hive), values, originalFilesPreserved = before.Count - 1-expected.Keys.Count(before.ContainsKey), servicesPreserved = services.Count,artwork=expected.Where(p=>WinPeArtwork.IsPicture(p.Key)) });
                 ct.ThrowIfCancellationRequested();
                 await run.Dism("/Unmount-Image", "/MountDir:" + mount, "/Commit", "/CheckIntegrity"); mounted = false;
                 log("Verified Setup TPM/Secure Boot/RAM bypasses in WinPE image " + entry.ImageIndex + "; original tools and services preserved.");
@@ -65,6 +82,7 @@ public static class SetupCompatibility
             }
         }
         ct.ThrowIfCancellationRequested();
+        background?.VerifySaved(source,candidate);
         File.WriteAllText(Path.Combine(work, "setup-compatibility.json"), JsonSerializer.Serialize(receipts, new JsonSerializerOptions { WriteIndented = true }));
         File.SetAttributes(source, File.GetAttributes(source) & ~FileAttributes.ReadOnly);
         File.Replace(candidate, source, backup);

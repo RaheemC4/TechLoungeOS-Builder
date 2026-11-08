@@ -42,10 +42,12 @@ static class RecommendedChecks
                 check(!File.Exists(Path.Combine(state, "complete")) && Directory.GetFiles(state, "*.done").Length == settings.Length - 1,
                     scope + " profile reports a failed write and retains all successful entries: " + status);
                 var backupBefore = File.ReadAllBytes(Path.Combine(state, "0.before.xml"));
+                var previouslyDone=settings[1];
+                await run.PowerShell("New-ItemProperty -LiteralPath "+Policy.Ps(prefix+previouslyDone.Path)+" -Name "+Policy.Ps(previouslyDone.Name)+" -Value 'stale receipt' -PropertyType String -Force|Out-Null");
                 await run.PowerShell("& " + Policy.Ps(path));
                 var result = await run.PowerShell("$rows=ConvertFrom-Json " + Policy.Ps(JsonSerializer.Serialize(settings)) + "; foreach($row in $rows){$key=Get-Item -LiteralPath (" + Policy.Ps(prefix) + "+$row.Path);try{if($key.GetValue($row.Name) -ne $row.Value -or $key.GetValueKind($row.Name) -ne 'DWord'){throw 'Unexpected readback'}}finally{$key.Close()}}; $b=Import-Clixml -LiteralPath " + Policy.Ps(Path.Combine(state,"0.before.xml")) + "; if($b.Previous.Kind -ne 'String' -or $b.Previous.Value -ne 'original string'){throw 'Original backup lost'}; 'verified'");
                 check(result.Contains("verified") && File.Exists(Path.Combine(state, "complete")) && File.ReadAllBytes(Path.Combine(state, "0.before.xml")).SequenceEqual(backupBefore),
-                    scope + " retry applies exact DWORD values and preserves original value/type backups");
+                    scope + " retry repairs stale done receipts, verifies exact DWORD values and preserves original value/type backups");
                 await run.PowerShell("Set-ItemProperty -LiteralPath " + Policy.Ps(prefix + first.Path) + " -Name " + Policy.Ps(first.Name) + " -Value 9; & " + Policy.Ps(path) + "; if((Get-ItemPropertyValue -LiteralPath " + Policy.Ps(prefix + first.Path) + " -Name " + Policy.Ps(first.Name) + ") -ne 9){throw 'Completed profile overwrote a later user change'}");
                 check(true, scope + " completed profile does not reapply over subsequent user changes");
                 if(!machine)

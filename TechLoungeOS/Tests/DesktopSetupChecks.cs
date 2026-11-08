@@ -33,6 +33,12 @@ internal static class DesktopSetupChecks
         try {await run.PowerShell(". "+Policy.Ps(worker)+" -Library\n$item=ConvertFrom-Json "+Policy.Ps(JsonSerializer.Serialize(bad))+"\nCopy-DesktopSetupInput $item "+Policy.Ps(Path.Combine(area,"source"))+" "+Policy.Ps(cache));throw new Exception("Corrupt input accepted");}
         catch(IOException ex) when(ex.Message.Contains("checksum changed"))
         {check(!File.Exists(Path.Combine(cache,"must-not-exist.dat")),"a changed input cannot create an executable cache file");}
+        var retainedBad=bad with{Destination=@"Data\payload.dat"};
+        try{await run.PowerShell(". "+Policy.Ps(worker)+" -Library\n$item=ConvertFrom-Json "+Policy.Ps(JsonSerializer.Serialize(retainedBad))+"\nCopy-DesktopSetupInput $item "+Policy.Ps(Path.Combine(area,"source"))+" "+Policy.Ps(cache));throw new Exception("Corrupt cache replacement accepted");}
+        catch(IOException ex)when(ex.Message.Contains("checksum changed")){
+            check(File.ReadAllText(Path.Combine(cache,@"Data\payload.dat"))=="hello"&&!Directory.EnumerateFiles(cache,"*.partial",SearchOption.AllDirectories).Any(),
+                "checksum failure retains the previous trusted cache and removes the untrusted partial copy");
+        }
         var held=Path.Combine(source,@"Data\payload.dat");
         using(var writer=new FileStream(held,FileMode.Open,FileAccess.Write,FileShare.ReadWrite))
         {

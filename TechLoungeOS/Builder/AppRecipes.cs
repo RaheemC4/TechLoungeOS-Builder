@@ -104,7 +104,7 @@ public static class AppRecipes
             $process = Start-Process -FilePath $file -ArgumentList '{{(id == "TechLounge.HatchZip" ? "/VERYSILENT /SUPPRESSMSGBOXES /NORESTART" : "/S")}}' -Wait -PassThru
             if ($process.ExitCode -notin @(0,3010)) { throw "Installer failed: $($process.ExitCode)" }
             }
-        {{(id == RecommendedApps.HatchZip ? HatchZipShortcut : "")}}
+            {{(id == RecommendedApps.HatchZip ? HatchZipShortcut : "")}}
           }
         """;
     }
@@ -114,10 +114,11 @@ public static class AppRecipes
             if(!(Test-Path -LiteralPath $hatchExe -PathType Leaf)){throw 'HatchZip is installed but its desktop application could not be located. Retry setup after checking its installation.'}
             $hatchShell=New-Object -ComObject WScript.Shell
             try{
-              $hatchPath=Join-Path ([Environment]::GetFolderPath('Desktop')) 'HatchZip.lnk'
+              $hatchPath=Join-Path ([Environment]::GetFolderPath('Programs')) 'HatchZip\\HatchZip.lnk'
+              New-Item -Path (Split-Path $hatchPath) -ItemType Directory -Force -ErrorAction Stop|Out-Null
               $hatchLink=$hatchShell.CreateShortcut($hatchPath)
               try{
-                if((Test-Path -LiteralPath $hatchPath) -and !$hatchLink.TargetPath.Equals($hatchExe,[StringComparison]::OrdinalIgnoreCase)){throw 'An existing HatchZip desktop shortcut points elsewhere. It was kept unchanged.'}
+                if((Test-Path -LiteralPath $hatchPath) -and !$hatchLink.TargetPath.Equals($hatchExe,[StringComparison]::OrdinalIgnoreCase)){throw 'An existing HatchZip Start menu shortcut points elsewhere. It was kept unchanged.'}
                 $hatchLink.TargetPath=$hatchExe;$hatchLink.WorkingDirectory=Split-Path $hatchExe;$hatchLink.IconLocation=$hatchExe
                 $hatchLink.Save()
               }finally{[void][Runtime.InteropServices.Marshal]::FinalReleaseComObject($hatchLink)}

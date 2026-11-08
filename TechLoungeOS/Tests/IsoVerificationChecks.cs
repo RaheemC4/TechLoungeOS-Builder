@@ -37,6 +37,13 @@ internal static class IsoVerificationChecks
         File.WriteAllText(Path.Combine(exported,"PSObject"),"ordinary ISO file with a PowerShell member name");
         File.WriteAllText(manifest,JsonSerializer.Serialize(IsoMediaVerification.Snapshot(source,CancellationToken.None)));
         check((await Verify()).Contains("verified 3 files",StringComparison.Ordinal),"ordinary filenames matching PowerShell members retain their checksum verification");
+        var large=Path.Combine(source,"large.bin");var largeExport=Path.Combine(exported,"large.bin");
+        var bytes=System.Security.Cryptography.RandomNumberGenerator.GetBytes(17<<20);File.WriteAllBytes(large,bytes);File.Copy(large,largeExport);
+        File.WriteAllText(manifest,JsonSerializer.Serialize(IsoMediaVerification.Snapshot(source,CancellationToken.None)));
+        check((await Verify()).Contains("verified 4 files",StringComparison.Ordinal),"large buffered readback and small/empty files all retain full SHA256 verification");
+        using(var changedLarge=new FileStream(largeExport,FileMode.Open,FileAccess.Write,FileShare.None)){changedLarge.Position=(16<<20)+123;changedLarge.WriteByte((byte)(bytes[(16<<20)+123]^1));}
+        await Reject("size/checksum verification","one-bit corruption beyond the large-buffer boundary is rejected before publication");
+        File.Delete(large);File.Delete(largeExport);File.WriteAllText(manifest,JsonSerializer.Serialize(IsoMediaVerification.Snapshot(source,CancellationToken.None)));
         var empty=Path.Combine(folder,"empty-media");Directory.CreateDirectory(empty);
         try{IsoMediaVerification.Snapshot(empty,CancellationToken.None);throw new Exception("Empty source accepted");}
         catch(IOException){check(true,"empty media cannot produce a meaningless successful verification");}

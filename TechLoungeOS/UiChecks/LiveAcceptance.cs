@@ -156,7 +156,7 @@ internal static class LiveAcceptance
             else if(o.Action=="usb-resume")
             {
                 var prepared=JsonSerializer.Deserialize<PreparedUsb>(File.ReadAllText(@"S:\usb-pe-145\prepared.json"))??throw new IOException("Missing prepared USB checkpoint.");
-                if(Path.GetFullPath(prepared.Workspace)!=@"S:\usb-pe-145"||Path.GetFullPath(prepared.Iso)!=@"S:\PE-only.iso"||prepared.IsoSha256!="7327F62BCF974A24656B857F38C5E83DCFACCFB55BA984B4D38BE80BDE13BF0F"||BootableDrive.Hash(prepared.Iso)!=prepared.IsoSha256)throw new IOException("Prepared USB checkpoint does not match the verified PE-only ISO.");
+                if(Path.GetFullPath(prepared.Workspace)!=@"S:\usb-pe-145"||prepared.Iso is null||Path.GetFullPath(prepared.Iso)!=@"S:\PE-only.iso"||prepared.IsoSha256!="7327F62BCF974A24656B857F38C5E83DCFACCFB55BA984B4D38BE80BDE13BF0F"||BootableDrive.Hash(prepared.Iso)!=prepared.IsoSha256)throw new IOException("Prepared USB checkpoint does not match the verified PE-only ISO.");
                 var engine=new BootableDrive(new ProcessRunner(Log),Log);
                 var disk=(await engine.List()).Single(d=>d.SerialNumber=="TLOS-USB-114");
                 await engine.Write(prepared,disk,"ERASE "+disk.Number,CancellationToken.None);

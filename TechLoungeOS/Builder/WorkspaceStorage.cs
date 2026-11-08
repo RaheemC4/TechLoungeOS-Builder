@@ -30,11 +30,22 @@ internal static class WorkspaceStorage
                 Policy.RequireUnlinkedPath(path);
                 var parent=new DirectoryInfo(Path.GetDirectoryName(path)!);
                 while(!parent.Exists)parent=parent.Parent??throw new IOException("No local storage parent");
-                using var probe=new FileStream(Path.Combine(parent.FullName,".tlos-probe-"+Guid.NewGuid().ToString("N")),FileMode.CreateNew,FileAccess.Write,FileShare.None,1,FileOptions.DeleteOnClose);
+                ProbeDirectory(parent.FullName);
                 return path;
             }
             catch(Exception ex) when(ex is IOException or UnauthorizedAccessException){volumes.RemoveAll(v=>v.Root==root);}
         }
         throw new IOException("No writable local drive has enough free space. Free some space and try again.");
+    }
+
+    internal static void ProbeDirectory(string directory)
+    {
+        Policy.RequireUnlinkedPath(directory);
+        var path=Path.Combine(directory,".tlos-probe-"+Guid.NewGuid().ToString("N"));
+        var expected=System.Security.Cryptography.RandomNumberGenerator.GetBytes(4096);
+        using var probe=new FileStream(path,FileMode.CreateNew,FileAccess.ReadWrite,FileShare.None,4096,FileOptions.DeleteOnClose|FileOptions.WriteThrough);
+        probe.Write(expected);probe.Flush(true);probe.Position=0;
+        var actual=new byte[expected.Length];probe.ReadExactly(actual);
+        if(!actual.AsSpan().SequenceEqual(expected))throw new IOException("The working drive did not read back the files correctly. Check the drive before trying again.");
     }
 }

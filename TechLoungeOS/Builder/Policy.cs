@@ -5,6 +5,7 @@ public record Component(string Kind, string Name);
 public record BuildOptions(string Iso, int Index, string Workspace, string Output, string Oscdimg,
     Component[] Remove, string[] Apps, bool GameMode, bool DisableSuggestions, string? TweaksFolder)
 {
+    public bool ExportIso { get; init; } = true;
     public string? WallpaperFile { get; init; }
     public string? WallpaperPreset { get; init; } = Personalisation.Catalog.Default;
     public bool AnimatedWinPe { get; init; }
@@ -14,6 +15,7 @@ public record BuildOptions(string Iso, int Index, string Workspace, string Outpu
     public bool IncludeNvidiaSetup { get; init; } = true;
     public bool IncludeAmdIntelGraphics { get; init; } = true;
     public bool Target16GbUsb { get; init; } = true;
+    public long? UsbTargetBytes { get; init; }
     public bool IncludeRuntimePack { get; init; } = true;
     public bool IncludeEdge { get; init; } = true;
     public bool IncludeNet8 { get; init; }
@@ -44,6 +46,8 @@ public static class Policy
     public static void Validate(BuildOptions o,bool requireIsoTool=true)
     {
         SetupRegional.ValidateSelections(o);
+        if(o.UsbTargetBytes is { } usbBytes && (usbBytes<8_000_000_000L || usbBytes>(8L<<40)))
+            throw new InvalidOperationException("The selected USB capacity is unsupported.");
         Wallpaper.Validate(o.WallpaperFile);
         WallpaperPresets.Validate(o.WallpaperPreset);
         if(o.UpdateWindows && o.WindowsUpdateFolder != null)

@@ -11,7 +11,7 @@ static class StoreChecks
         var retained=Path.Combine(root,"store-retained"); var noDownload = new UnavailableStore();
         await StoreXbox.Prepare(noDownload,retained,null,CancellationToken.None,StoreXbox.Products.Select(p=>p.Identity).ToArray());
         var plan=JsonSerializer.Deserialize<StoreXbox.Package[]>(File.ReadAllText(Path.Combine(retained,"packages.json")))!;
-        check(noDownload.Arguments.Length==0 && plan.Length==6 && plan.All(p=>p.Main==""),"an image already provisioning Store/Xbox requires no replacement package downloads");
+        check(noDownload.Arguments.Length==0 && plan.Length==8 && plan.All(p=>p.Main==""),"an image already provisioning all eight required Store/Xbox/Windows app packages requires no replacement downloads");
         var payload=Path.Combine(root,"store-fixture");Directory.CreateDirectory(payload);
         var entries=new List<StoreXbox.Package>();
         foreach(var (_,identity) in StoreXbox.Products)
@@ -48,11 +48,11 @@ static class StoreChecks
             & {{Policy.Ps(path)}}
             """;
         var run=new ProcessRunner(_=>{});await run.PowerShell(header);
-        check(File.ReadAllLines(Path.Combine(payload,"installed.txt")).Order().SequenceEqual(StoreXbox.Products.Select(p=>p.Identity).Order()) && File.Exists(Path.Combine(payload,"packages-ready")) && File.Exists(Path.Combine(payload,"complete")),"Store setup provisions all six selected machine packages before declaring completion");
+        check(File.ReadAllLines(Path.Combine(payload,"installed.txt")).Order().SequenceEqual(StoreXbox.Products.Select(p=>p.Identity).Order()) && File.Exists(Path.Combine(payload,"packages-ready")) && File.Exists(Path.Combine(payload,"complete")),"Store setup provisions all eight required machine packages before declaring completion");
         var services=File.ReadAllLines(Path.Combine(payload,"services.txt"));
         check(services.Contains("wuauserv=Manual") && services.Contains("StateRepository=Automatic") && services.Contains("GamingServices=Automatic") && services.Contains("XblAuthManager=Manual") && File.ReadAllLines(Path.Combine(payload,"policy.txt")).SequenceEqual(new[]{"RemoveWindowsStore","DisableStoreApps"}),"Store setup enables the intended dependency services and removes only the two selected Store block values");
         File.Delete(Path.Combine(payload,"complete"));await run.PowerShell(header);
-        check(File.ReadAllLines(Path.Combine(payload,"installed.txt")).Length==6,"Store setup retains existing provisioned packages on recovery rather than reinstalling them");
+        check(File.ReadAllLines(Path.Combine(payload,"installed.txt")).Length==8,"Store setup retains all eight existing provisioned packages on recovery rather than reinstalling them");
         File.Delete(Path.Combine(payload,"complete"));
         var deferred=header.Replace("param($Name,$ErrorAction) [pscustomobject]@{Name=$Name;StartType='Disabled'}","param($Name,$ErrorAction) if($Name -in @('GamingServices','GamingServicesNet')){return};[pscustomobject]@{Name=$Name;StartType='Disabled'}");
         await run.PowerShell(deferred);

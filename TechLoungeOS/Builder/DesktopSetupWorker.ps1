@@ -34,22 +34,31 @@ function Copy-DesktopSetupInput($Item,[string]$SourceRoot,[string]$CacheRoot) {
  Assert-DesktopSetupUnlinked $target
  # CacheRoot is created beneath the already protected SYSTEM task directory.
  New-Item -ItemType Directory -Path (Split-Path -Parent $target) -Force|Out-Null
+ $temporary=$target+'.'+[Guid]::NewGuid().ToString('N')+'.partial'
+ Assert-DesktopSetupUnlinked $temporary
+ try {
  $input=[IO.FileStream]::new($source,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
  try {
   if($input.Length -ne [long]$Item.Bytes){throw 'Desktop setup input length changed'}
-  $sha=[Security.Cryptography.SHA256]::Create()
-  try{$actual=([BitConverter]::ToString($sha.ComputeHash($input))).Replace('-','')}finally{$sha.Dispose()}
-  if($actual -ine [string]$Item.Sha256){throw 'Desktop setup input checksum changed'}
-  $input.Position=0
   # The same handle denies writers/deletion until copying has finished.
-  $output=[IO.FileStream]::new($target,[IO.FileMode]::Create,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+  $output=[IO.FileStream]::new($temporary,[IO.FileMode]::CreateNew,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
   try {
-   $input.CopyTo($output);$output.Flush($true);$output.Position=0
+   # Hash while copying to the protected cache rather than reading the source twice.
+   # Publish the executable cache name only after both checks have succeeded.
+   $sha=[Security.Cryptography.SHA256]::Create()
+   try {
+    $hashing=[Security.Cryptography.CryptoStream]::new($output,$sha,[Security.Cryptography.CryptoStreamMode]::Write,$true)
+    try{$input.CopyTo($hashing);$hashing.FlushFinalBlock();$actual=([BitConverter]::ToString($sha.Hash)).Replace('-','')}finally{$hashing.Dispose()}
+    if($actual -ine [string]$Item.Sha256){throw 'Desktop setup input checksum changed'}
+   }finally{$sha.Dispose()}
+   $output.Flush($true);$output.Position=0
    $verify=[Security.Cryptography.SHA256]::Create()
    try{$copied=([BitConverter]::ToString($verify.ComputeHash($output))).Replace('-','')}finally{$verify.Dispose()}
    if($copied -ine [string]$Item.Sha256){throw 'Desktop setup cache readback checksum changed'}
   }finally{$output.Dispose()}
  }finally{$input.Dispose()}
+ if([IO.File]::Exists($target)){[IO.File]::Replace($temporary,$target,[NullString]::Value)}else{[IO.File]::Move($temporary,$target)}
+ }finally{if([IO.File]::Exists($temporary)){[IO.File]::Delete($temporary)}}
 }
 
 # Unit checks may load the file-copy boundary without registering/running tasks.
@@ -68,6 +77,8 @@ function Write-DesktopSetupStatus([string]$Phase,[string]$Step,[string]$Message)
 
 $gate=[IO.File]::Open((Join-Path $root 'install.lock'),'OpenOrCreate','ReadWrite','None')
 $script:done=0;$script:total=0;$current=''
+$deferOffice=!(Test-Path -LiteralPath (Join-Path $root 'core-ready'))
+$stageStarted=[DateTime]::UtcNow
 try {
  if(Test-Path -LiteralPath (Join-Path $root 'runtime-policy.ps1')){
   . (Join-Path $root 'runtime-policy.ps1')
@@ -109,6 +120,12 @@ try {
  foreach($step in $steps){
   $current=[string]$step.Id;$receipt=Join-Path $root ($current+'.done')
   if(Test-Path -LiteralPath $receipt){$script:done++;continue}
+  if($current -ceq 'Office' -and $deferOffice){
+   [IO.File]::WriteAllText((Join-Path $root 'core-ready'),'Required components verified; Office is deferred until selected apps finish.')
+   Write-DesktopSetupStatus 'queued' 'Office' 'Required components are ready. Selected apps install next, then Microsoft 365.'
+   exit 0
+  }
+  $stageStarted=[DateTime]::UtcNow
   $cache=Get-DesktopSetupPath $root ('payloads\'+$current)
   Assert-DesktopSetupUnlinked $cache
   New-Item -ItemType Directory -Path $cache -Force|Out-Null
@@ -136,7 +153,11 @@ try {
    try{[IO.File]::WriteAllText((Join-Path $root 'running.json'),(@{id=$current;pid=$installer.Id;startedUtc=$installer.StartTime.ToUniversalTime().ToString('o')}|ConvertTo-Json -Compress))}
    catch{if(!$installer.HasExited){throw}}
   # Never terminate Windows servicing or a vendor installer to satisfy a timer.
-  $installer.WaitForExit()
+  while(!$installer.WaitForExit(1000)){
+   $elapsed=[TimeSpan]([DateTime]::UtcNow-$stageStarted)
+   $message=if($current -ceq 'Office'){'Installing Microsoft 365 from its verified offline files. Smaller selected apps have finished.'}else{'Installing quietly. Your Windows desktop remains available.'}
+   Write-DesktopSetupStatus 'installing' $current ($message+' This stage: '+$elapsed.ToString('hh\:mm\:ss')+'. Keep this PC on; do not restart.')
+  }
   if($installer.ExitCode -notin @(0,3010)){throw ('Installer did not complete: '+$current+' (exit '+$installer.ExitCode+')')}
   }finally{$installer.Dispose()}
   $marker=switch($current){
@@ -156,6 +177,7 @@ try {
   $script:done++
  }
  [IO.File]::WriteAllText((Join-Path $root 'complete'),'All required machine installers completed')
+ [IO.File]::WriteAllText((Join-Path $root 'core-ready'),'Required components verified')
  Write-DesktopSetupStatus 'complete' '' 'Required installers are ready. Selected apps and final settings can continue.'
  Remove-Item -LiteralPath (Join-Path $root 'running.json') -ErrorAction SilentlyContinue
 }catch{

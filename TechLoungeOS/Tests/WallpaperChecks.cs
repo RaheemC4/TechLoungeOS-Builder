@@ -22,7 +22,7 @@ static class WallpaperChecks
         check(File.ReadAllBytes(Path.Combine(mount, "ProgramData", "TechLoungeOS", "wallpaper.bmp")).SequenceEqual(bytes), "wallpaper payload is staged intact");
         var library=Path.Combine(mount,@"ProgramData\TechLoungeOS\Wallpapers");
         check(Directory.GetFiles(library,"*.png").Length==15 && File.Exists(Path.Combine(library,"Personalise.exe")) && Directory.GetFiles(library).Sum(f=>new FileInfo(f).Length)<12L*1024*1024,"all five approved designs and three colours remain available after install with a compact native companion");
-        check(!File.ReadAllText(Path.Combine(mount,@"ProgramData\TechLoungeOS\first-login.ps1")).Contains("--apply"),"a chosen custom image takes precedence over the default preset");
+        check(!File.ReadAllText(Path.Combine(mount,@"ProgramData\TechLoungeOS\first-login.ps1")).Contains(WallpaperPresets.FirstLogin("waterfall.ice")),"a chosen custom image takes precedence over the default preset");
         var presetMount=Path.Combine(folder,"preset-image");
         Provisioning.Stage(presetMount,options with{WallpaperFile=null,WallpaperPreset="waterfall.ice",Apps=[],GameMode=false,DisableSuggestions=false});
         var presetScript=File.ReadAllText(Path.Combine(presetMount,@"ProgramData\TechLoungeOS\first-login.ps1"));

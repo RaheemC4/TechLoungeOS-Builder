@@ -21,7 +21,7 @@ public static class RecommendedDefaultUser
         Ok(OROpenHive(source,out var hive));
         try
         {
-            var settings=DesktopDefaults.Settings.Where(s=>s.Scope=="User").Concat(includeRecommended?RecommendedProfile.Settings.Where(s=>s.Scope=="User" && s.Path.StartsWith(@"SOFTWARE\Policies\",StringComparison.OrdinalIgnoreCase)):[]);
+            var settings=DesktopDefaults.Settings.Where(s=>s.Scope=="User").Concat(includeRecommended?RecommendedProfile.Settings.Where(s=>s.Scope=="User"):[]);
             foreach(var setting in settings)
             {
                 var key=hive;
@@ -41,6 +41,7 @@ public static class RecommendedDefaultUser
                 }
                 finally{if(key!=hive)Ok(ORCloseKey(key));}
             }
+            FolderViewDefaults.Seed(hive,mount);
             Ok(ORSaveHive(hive,temporary,10,0));
         }
         finally{Ok(ORCloseHive(hive));}

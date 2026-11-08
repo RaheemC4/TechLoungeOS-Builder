@@ -1,4 +1,62 @@
 using TechLoungeOS;
+if(args is ["--build-perf-checks"])
+{
+    var perfRoot=Path.Combine(Path.GetTempPath(),"TLOS-build-perf-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(perfRoot);
+    var perfOptions=new BuildOptions("unused.iso",1,perfRoot,"unused-output.iso","unused-tool",[],[],false,false,null){IncludeRuntimePack=false,IncludeOffice=false,IncludeStoreXbox=false,IncludeEdge=false,IncludeNvidiaSetup=false};
+    try{await BuildPerformanceChecks.Run(perfRoot,perfOptions,(ok,name)=>{if(!ok)throw new IOException("FAIL: "+name);Console.WriteLine("PASS: "+name);});}
+    finally{Directory.Delete(perfRoot,true);}return;
+}
+if(args is ["--prepare-completed-usb",var completedWorkspace,var expectedWindowsVersion])
+{
+    completedWorkspace=Path.GetFullPath(completedWorkspace);Policy.RequireUnlinkedPath(completedWorkspace);
+    if(!Version.TryParse(expectedWindowsVersion,out var requiredVersion)||requiredVersion.Major!=10||requiredVersion.Build<22000)
+        throw new IOException("Expected a Windows 11 build for the prepared-media handoff.");
+    var completedImage=Path.Combine(completedWorkspace,@"media\sources\install.esd");
+    if(!File.Exists(completedImage))completedImage=Path.Combine(completedWorkspace,@"media\sources\install.wim");
+    var handoffRunner=new ProcessRunner(Console.WriteLine,Path.Combine(completedWorkspace,"scratch"));
+    var actualVersion=(await handoffRunner.PowerShell("[string](Get-WindowsImage -ImagePath "+Policy.Ps(completedImage)+" -Index 1 -ErrorAction Stop).Version")).Trim();
+    if(actualVersion!=requiredVersion.ToString())throw new IOException("The prepared Windows version differs from the intended USB build.");
+    // This is only a capacity-planning fixture. No physical device is listed or written.
+    var planningDisk=new UsbDisk(9999,"INERT","INERT","INERT","16 GB planning fixture",16_000_000_000,7,512,false,false,false,false,false,[]);
+    var handoff=await new BootableDrive(handoffRunner,Console.WriteLine).PrepareBuiltMedia(completedWorkspace,planningDisk,CancellationToken.None);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{checkpoint=Path.Combine(completedWorkspace,"prepared.json"),windowsVersion=actualVersion,handoff.Bytes,files=handoff.Files.Length,physicalDeviceWritten=false}));return;
+}
+if(args is ["--pe-artwork-checks"])
+{
+    var artworkFixtureRoot=Path.Combine(Path.GetTempPath(),"TLOS-pe-artwork-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(artworkFixtureRoot);
+    PeArtworkChecks.Run(artworkFixtureRoot,(ok,name)=>{if(!ok)throw new IOException("FAIL: "+name);Console.WriteLine("PASS: "+name);});
+    Console.WriteLine("Artwork fixture retained at "+artworkFixtureRoot+". No booted Windows or USB changed.");return;
+}
+if(args is ["--appearance-setup-checks"])
+{
+    var appearanceFixtureRoot=Path.Combine(Path.GetTempPath(),"TLOS-appearance-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(appearanceFixtureRoot);
+    try{await AppearanceSetupChecks.Run(appearanceFixtureRoot,(ok,name)=>{if(!ok)throw new IOException("FAIL: "+name);Console.WriteLine("PASS: "+name);});}
+    finally{Directory.Delete(appearanceFixtureRoot,true);}return;
+}
+if(args is ["--account-answer-checks"])
+{
+    var checks=0;SetupAnswerChecks.Run((ok,name)=>{if(!ok)throw new IOException("FAIL: "+name);checks++;Console.WriteLine("PASS: "+name);});
+    Console.WriteLine(checks+" account answer-file checks passed. No Windows setup or account settings changed.");return;
+}
+if(args is ["--combined-pe-native",var combinedPeFixtureRoot]){await NativeCombinedPeChecks.Run(combinedPeFixtureRoot);return;}
+if(args is ["--pipeline-perf-native",var performanceFolder]){await PipelinePerformanceChecks.Run(performanceFolder);return;}
+if(args is ["--compression-scaling-native",var scalingFolder]){await PipelinePerformanceChecks.Run(scalingFolder,true);return;}
+if(args is ["--hash-perf-native",var hashFixture]){PipelinePerformanceChecks.Hash(hashFixture);return;}
+if(args is ["--usb-fast-checks"])
+{
+    var fastRoot=Path.Combine(Path.GetTempPath(),"TLOS-usb-fast-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(fastRoot);
+    void Assert(bool ok,string name){if(!ok)throw new IOException("FAIL: "+name);Console.WriteLine("PASS: "+name);}
+    try{await UsbChecks.Run(fastRoot,Assert);await BuiltUsbMediaChecks.Run(fastRoot,Assert);UsbTransferChecks.Run(fastRoot,Assert);}
+    finally{Directory.Delete(fastRoot,true);}return;
+}
+if(args is ["--prepared-usb-checks",var checkpointPath])
+{
+    var prepared=BootableDrive.LoadCheckpoint(checkpointPath);var files=BootableDrive.Scan(Path.Combine(prepared.Workspace,"media"));
+    if(!files.OrderBy(f=>f.RelativePath,StringComparer.OrdinalIgnoreCase).SequenceEqual(prepared.Files.OrderBy(f=>f.RelativePath,StringComparer.OrdinalIgnoreCase)))throw new IOException("Prepared files differ from their accepted manifest");
+    var disk=new UsbDisk(9999,"INERT","INERT","INERT","64 GB planning fixture",61_991_813_120,7,512,false,false,false,false,false,[]);
+    Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new{files=files.Length,prepared.Bytes,bootPartitionBytes=BootableDrive.PlannedBootPartition(disk,files),visibleDataBytes=disk.Size-BootableDrive.PlannedBootPartition(disk,files)-(2L<<20),allManifestHashesMatched=true,physicalDeviceWritten=false}));return;
+}
+if(args is ["--owned-current-usb",var usbProof]) {await NativeCurrentUsb.Run(usbProof);return;}
 if(args is ["--work-progress-checks"])
 {
     WorkProgressChecks.Run((ok,name)=>{if(!ok)throw new Exception("FAIL: "+name);Console.WriteLine("PASS: "+name);});return;
@@ -66,6 +124,8 @@ if(args is ["--emit-post-app-fixture",var postAppDestination])
     scripts["hatch-first-login.ps1"]=AppRecipes.Script(RecommendedApps.HatchZip);
     scripts["runtime-policy.ps1"]=TweaksRuntime.Worker;
     scripts["machine-worker.ps1"]=DesktopSetup.Worker;
+    scripts["driver-lock.ps1"]=GraphicsQueue.LockScript;
+    scripts["nvidia-install.ps1"]=NvidiaSetup.Script;
     scripts["tweaks-first-login.ps1"]=TweaksInstaller.FirstLogin;
     scripts["chatgpt-first-login.ps1"]=AppRecipes.ChatGPTScript;
     foreach(var item in scripts)File.WriteAllText(Path.Combine(postAppDestination,item.Key),item.Value,new System.Text.UTF8Encoding(false));
@@ -503,8 +563,11 @@ try
     var tool = Path.Combine(root, "oscdimg.exe"); File.WriteAllText(tool, "fixture, never executed");
     var options = new BuildOptions(iso, 1, Path.Combine(root, "work"), Path.Combine(root, "out.iso"), tool, [], [], true, false, null) { IncludeEdge = false, IncludeRuntimePack = false, IncludeStoreXbox = false, IncludeOffice = false, IncludeNvidiaSetup = false };
     Policy.Validate(options); Check(true, "valid new build destinations");
+    await BuildPerformanceChecks.Run(root,options,Check);
     await SetupChecks.Run(root, options, Check);
     await UsbChecks.Run(root,Check);
+    await BuiltUsbMediaChecks.Run(root,Check);
+    UsbTransferChecks.Run(root,Check);
     await UpdateChecks.Run(root,Check);
     PeBackgroundChecks.Run(root,Check);
     PeStartupChecks.Run(root,Check);
@@ -518,6 +581,7 @@ try
     await PreservationChecks.Run(root, options, Check);
     await LaunchChecks.Run(root, Check);
     await WallpaperChecks.Run(root, options, Check);
+    await AppearanceSetupChecks.Run(root,Check);
     Policy.Validate(options with { Apps = ["Mozilla.Firefox"] }); Check(true, "searched app ID passes build validation");
     Throws(() => Policy.Validate(options with { Apps = ["Mozilla.Firefox", "mozilla.firefox"] }), "duplicate app IDs cannot create duplicate provisioning steps");
     Throws(() => Policy.Validate(options with { Output = "" }), "blank output rejected before servicing");
@@ -576,7 +640,7 @@ try
     Check(Provisioning.HasImageRuntime(mount), "runtime executable at a supported image path is detected");
     var script = File.ReadAllText(Path.Combine(mount, @"ProgramData\TechLoungeOS\first-login.ps1"));
     Check(script.Contains("AutoGameModeEnabled -Value 1") && script.Contains("Install-WinGetApp 'Valve.Steam'"), "selected settings and app staged");
-    Check(!script.Contains("pause_windows_updates") && !script.Contains("Apply Recommended") && System.Text.RegularExpressions.Regex.Matches(script,"Start-Process").Count==2 && script.Contains("Start-Process -FilePath $helper") && script.Contains("Start-Process -FilePath 'ms-settings:signinoptions'"), "no bulk Tweaks preset or implicit Tweaks launch; process targets are the selected wallpaper helper and conditional Hello invitation");
+    Check(!script.Contains("pause_windows_updates") && !script.Contains("Apply Recommended") && System.Text.RegularExpressions.Regex.Matches(script,"Start-Process").Count==3 && script.Contains("Personalise.exe") && script.Contains("LockScreenBridge.exe") && script.Contains("Start-Process -FilePath $helper") && script.Contains("Start-Process -FilePath 'ms-settings:signinoptions'"), "no bulk Tweaks preset or implicit Tweaks launch; process targets are the selected wallpaper helper, fixed lock-screen helper and conditional Hello invitation");
     Check(script.Contains("Invoke-Step 'Valve.Steam'") && script.Contains("$lock.Dispose()"), "per-step retries and exclusive state lock present");
     var runner = new ProcessRunner(_ => { });
     var parsed = await runner.PowerShell("$tokens=$null; $errors=$null; [System.Management.Automation.Language.Parser]::ParseFile(" + Policy.Ps(Path.Combine(mount,@"ProgramData\TechLoungeOS\first-login.ps1")) + ", [ref]$tokens, [ref]$errors) | Out-Null; if ($errors.Count) { throw ($errors | Out-String) }; 'parsed'");
@@ -600,6 +664,14 @@ try
         Check(File.ReadAllText(drained).Trim() == "finished", "failed log storage does not block subprocess output or completion");
     }
     var success = options with { Apps = ["Mozilla.Firefox"], Index = 2, Workspace = Path.Combine(root, "successful-build"), Remove = [new("Appx", "Microsoft.BingNews"), new("Feature", "WorkFolders-Client")] };
+    var direct=success with{ExportIso=false,Workspace=Path.Combine(root,"direct-media-build"),Output=Path.Combine(root,"unused-direct.iso")};
+    var directRunner=new FixtureRunner(direct.Workspace);var directProgress=new RecordingBuildProgress();
+    await new BuildEngine(_=>{},_=>directRunner,_=>new Dictionary<string,string>(),directProgress).Build(direct,CancellationToken.None);
+    Check(!File.Exists(direct.Output)&&File.ReadAllText(Path.Combine(direct.Workspace,@"media\sources\install.wim"))=="fixture wim"&&
+        !directRunner.Commands.Any(a=>a.Contains("--solid"))&&
+        directRunner.Commands.Any(a=>a.Contains("/Commit"))&&directRunner.Commands.Count(a=>a.Contains("/ScanHealth"))==2&&
+        !directRunner.Commands.Any(a=>a.Any(v=>v.EndsWith(".partial.iso",StringComparison.Ordinal)))&&directProgress.Phases[^1]=="USB media ready",
+        "USB-only retains the accepted image and health, servicing and commit gates while omitting needless recompression and ISO export/readback");
     var watched = success with { Workspace = Path.Combine(root, "journal-reader"), Output = Path.Combine(root, "journal-reader.iso") };
     FileStream? journalReader = null;
     try
@@ -613,6 +685,8 @@ try
         using var before = System.Text.Json.JsonDocument.Parse(snapshot.ReadToEnd());
         using var after = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(watched.Workspace, "state.json")));
         Check(before.RootElement.GetProperty("phase").GetString() == "Exporting selected edition" && after.RootElement.GetProperty("phase").GetString() == "Complete" && File.ReadAllText(watched.Output) == "fixture ISO", "an external delete-sharing journal reader retains its snapshot while the build atomically reaches Complete");
+        Check(after.RootElement.GetProperty("timings").EnumerateArray().Any(t=>t.GetProperty("stage").GetString()=="Exporting selected edition")&&after.RootElement.GetProperty("elapsedSeconds").GetDouble()>0,
+            "The completed build records actual phase durations and total elapsed time for future bottleneck analysis");
         Check(progress.Phases[0] == "Preparing build" && progress.Phases[^1] == "Complete" && progress.Phases.IndexOf("Committing") >= 0 && progress.Phases.IndexOf("Committing") < progress.Phases.IndexOf("Creating ISO") && progress.Phases.Contains("Servicing"), "the public build reports its actual saving/export stages through completion");
     }
     finally { journalReader?.Dispose(); }
@@ -631,6 +705,14 @@ try
         }
     }
     finally { blockedJournal?.Dispose(); }
+    var disconnected=success with{Workspace=Path.Combine(root,"device-disconnected"),Output=Path.Combine(root,"device-disconnected.iso")};
+    var deviceLog=new List<string>();
+    var disconnectedRunner=new FixtureRunner(disconnected.Workspace,afterDism:a=>{if(a.Contains("/Export-Image"))throw new NativeCommandException("dism.exe",433,"Injected device disconnect");});
+    try{await new BuildEngine(deviceLog.Add,_=>disconnectedRunner,_=>new Dictionary<string,string>()).Build(disconnected,CancellationToken.None);throw new Exception("Device disconnect was accepted");}
+    catch(NativeCommandException error){Check(error.ExitCode==433 && deviceLog.Any(l=>l=="Build workspace: "+disconnected.Workspace) && deviceLog.Any(l=>l.Contains("Injected device disconnect")) && !File.Exists(disconnected.Output),"A lost working drive preserves the native cause and recovery location without exporting an ISO");}
+    var storageProbe=Path.Combine(root,"storage-probe");Directory.CreateDirectory(storageProbe);var sentinel=Path.Combine(storageProbe,"keep.txt");File.WriteAllText(sentinel,"existing data");
+    WorkspaceStorage.ProbeDirectory(storageProbe);
+    Check(File.ReadAllText(sentinel)=="existing data" && Directory.GetFiles(storageProbe).SequenceEqual(new[]{sentinel}),"The real storage probe flushes and reads its private file and leaves existing data unchanged");
     var fixture = new FixtureRunner(success.Workspace);
     var cancelMount=options with{Index=2,Workspace=Path.Combine(root,"cancel-after-mount"),Output=Path.Combine(root,"cancel-after-mount.iso"),Remove=[]};
     using(var cancelSource=new CancellationTokenSource())
@@ -703,7 +785,7 @@ try
     var unsupportedPe=cancel with{Workspace=Path.Combine(root,"unsupported-pe"),AnimatedWinPe=true};
     var peFixture=new FixtureRunner(unsupportedPe.Workspace);
     try{await new BuildEngine(_=>{},_=>peFixture,_=>new Dictionary<string,string>()).Build(unsupportedPe,CancellationToken.None);throw new Exception("Expected unavailable PE payload rejection");}
-    catch(DirectoryNotFoundException)
+    catch(IOException error) when(error is DirectoryNotFoundException || error is FileNotFoundException missing && missing.FileName==Path.Combine(unsupportedPe.Workspace,@"mount\Windows\System32\config\SYSTEM"))
     {
         Check(peFixture.Commands.Any(c=>c.Contains("/Discard"))&&!peFixture.Commands.Any(c=>c.Contains("/Remove-ProvisionedAppxPackage")||c.Contains("/Commit"))&&!File.Exists(unsupportedPe.Output)&&File.ReadAllText(Path.Combine(unsupportedPe.Workspace,@"media\sources\boot.wim"))=="fixture","missing source regional prerequisites discard the private Windows mount before removals and preserve copied boot media");
     }

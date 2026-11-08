@@ -40,7 +40,7 @@ folder=Path.GetFullPath(folder);outputFolder=Path.GetFullPath(outputFolder);Upda
 if(Directory.Exists(outputFolder)||File.Exists(outputFolder)||outputFolder.StartsWith(folder+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new IOException("Choose a new output folder outside the published app.");
 if(FileVersionInfo.GetVersionInfo(Path.Combine(folder,UpdateTrust.MainExe)).FileVersion!=version)throw new IOException("Published executable version does not match the requested release.");
 // A raw dotnet publish lacks the mandatory support bundle. Refuse it before creating an archive.
-foreach(var relative in new[]{"FirstLogin.exe","AccountSetup.exe","Personalise.exe","DiscordLauncher.exe",
+foreach(var relative in new[]{"FirstLogin.exe","AccountSetup.exe","Personalise.exe","LockScreenBridge.exe","DiscordLauncher.exe",
     "integration/WebView2Runtime/msedgewebview2.exe","integration/WebView2Runtime/msedge.dll",
     "integration/WebView2Runtime/icudtl.dat","integration/WebView2Runtime/resources.pak",
     "integration/resources/nvidiaProfileInspector.exe","integration/resources/TechLoungeProfile.nip",

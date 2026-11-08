@@ -37,8 +37,15 @@ public static class RecommendedProfile
             for ($recommendedIndex = 0; $recommendedIndex -lt $recommendedSettings.Count; $recommendedIndex++) {
               $setting = $recommendedSettings[$recommendedIndex]
               $marker = Join-Path $recommendedRoot ($recommendedIndex.ToString() + '.done')
-              if (Test-Path $marker) { continue }
               try {
+              if (Test-Path $marker) {
+                $savedKey = Get-Item -LiteralPath ($recommendedHive + $setting.Path) -ErrorAction SilentlyContinue
+                if ($savedKey) {
+                  try { $stillMatches = $savedKey.GetValueNames() -contains $setting.Name -and $savedKey.GetValueKind($setting.Name) -eq 'DWord' -and $savedKey.GetValue($setting.Name) -eq $setting.Value }
+                  finally { $savedKey.Close() }
+                  if ($stillMatches) { continue }
+                }
+              }
                 $key = $recommendedHive + $setting.Path
                 # A protected user-policy key may already be seeded in the offline
                 # default profile. Verify its exact type/value without rewriting it.
@@ -66,8 +73,10 @@ public static class RecommendedProfile
                 }
                 if (!(Test-Path -LiteralPath $key)) { New-Item -Path $key -Force | Out-Null }
                 New-ItemProperty -LiteralPath $key -Name $setting.Name -Value $setting.Value -PropertyType DWord -Force | Out-Null
-                $readback = Get-ItemPropertyValue -LiteralPath $key -Name $setting.Name
-                if ($readback -ne $setting.Value) { throw 'The requested value did not read back.' }
+                $verifiedKey = Get-Item -LiteralPath $key
+                try {
+                  if ($verifiedKey.GetValueKind($setting.Name) -ne 'DWord' -or $verifiedKey.GetValue($setting.Name) -ne $setting.Value) { throw 'The requested DWORD value did not read back.' }
+                } finally { $verifiedKey.Close() }
                 Set-Content -LiteralPath $marker -Value 'Completed' -ErrorAction Stop
               } catch { $recommendedErrors.Add($setting.Tweak + ': ' + $_.Exception.Message) }
             }
@@ -75,7 +84,7 @@ public static class RecommendedProfile
               Set-Content "$recommendedRoot\status.txt" $recommendedErrors.ToArray()
               throw ('Recommended profile incomplete: ' + ($recommendedErrors -join '; '))
             }
-            Set-Content "$recommendedRoot\status.txt" 'Reviewed Recommended profile complete. Windows Update, Defender and GPU settings were excluded.'
+            Set-Content "$recommendedRoot\status.txt" 'Recommended privacy settings completed and verified. Windows Update and Defender were left unchanged. Graphics drivers and GPU profiles are handled separately for the detected hardware; this message does not confirm their installation.'
             Set-Content "$recommendedRoot\complete" 'Completed'
           } finally { $recommendedLock.Dispose() }
         }

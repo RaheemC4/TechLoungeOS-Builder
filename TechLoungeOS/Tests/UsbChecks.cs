@@ -49,6 +49,7 @@ static class UsbChecks
         var work=Path.Combine(root,"usb-prepared");var media=Path.Combine(work,"media");Directory.CreateDirectory(media);
         File.WriteAllText(Path.Combine(media,"setup.exe"),"fixture only; never executed");
         var files=BootableDrive.Scan(media);var prepared=new PreparedUsb(work,Path.Combine(root,"source.iso"),"unused",files,files.Sum(f=>f.Length));
+        good=good with{Size=16_000_000_000}; // This deliberately incomplete fixture tests pre-erase tamper detection, not large-drive boot planning.
         var runner=new ReadOnlyUsbRunner(good);var engine=new BootableDrive(runner,_=>{});
         try{await engine.Write(prepared,good,"ERASE 0",CancellationToken.None);throw new Exception("Expected confirmation rejection");}catch(IOException ex){check(ex.Message.Contains("confirmation")&&runner.Calls==0,"wrong erase confirmation executes no commands");}
         var byteRunner=new ReadOnlyUsbRunner(good);
@@ -56,6 +57,7 @@ static class UsbChecks
         catch(IOException error){check(error.Message.Contains("byte count differs")&&byteRunner.Calls==1,"a forged prepared byte count cannot bypass capacity checking or start formatting");}
         File.AppendAllText(Path.Combine(media,"setup.exe")," tampered");
         try{await engine.Write(prepared,good,"ERASE 99",CancellationToken.None);throw new Exception("Expected media rejection");}catch(IOException ex){check(ex.Message.Contains("Prepared media changed")&&runner.Calls==1,"changed staged bytes block USB formatting");}
+        good=good with{Size=64L<<30};
         var ps=new ProcessRunner(_=>{});
         var nativeDisks=await new BootableDrive(ps,_=>{}).List();
         check(nativeDisks.Any(d=>d.IsBoot&&d.Protected),"read-only native Windows drive inventory resolves CIM bus values and protects the boot disk");
@@ -142,7 +144,7 @@ static class UsbChecks
               [CmdletBinding()]param([int]$DiskNumber,[long]$Size,[switch]$UseMaximumSize,[switch]$AssignDriveLetter)
               $script:created++
               if(($script:created -eq 1 -and ($UseMaximumSize -or $Size -ne 808452096)) -or ($script:created -eq 2 -and !$UseMaximumSize)){throw 'Wrong boot/data partition sizes'}
-              [pscustomobject]@{DiskNumber=$DiskNumber;Number=$script:created}
+              [pscustomobject]@{DiskNumber=$DiskNumber;Number=$script:created;Size=$(if($UseMaximumSize){67908927488}else{$Size})}
             }
             function Format-Volume {
               [CmdletBinding(SupportsShouldProcess=$true)]param([Parameter(ValueFromPipeline=$true)]$InputObject,[string]$FileSystem,[string]$NewFileSystemLabel,[switch]$Force)
@@ -183,6 +185,29 @@ static class UsbChecks
         {
             check((await ps.PowerShell(invalid+"\ntry{\n"+bootScript+"\nthrow 'Expected refusal'}catch{if($script:bootWritten -or $_.Exception.Message -eq 'Expected refusal'){throw};'BOOT_BLOCKED'}")).Contains("BOOT_BLOCKED"),"changed disk/partition/volume identity blocks boot-code writes (native executable mocked)");
         }
+        var hiddenVolume=new BootableDrive.WrittenVolume(@"\\?\Volume{11111111-1111-1111-1111-111111111111}\","U",@"\\?\Volume{22222222-2222-2222-2222-222222222222}\","V");
+        var hideScript=BootableDrive.HideBootScript(good,hiddenVolume);
+        var hideFixture=simulation.Replace("__STYLE__","MBR")+"""
+
+            $script:removed=$false;$script:efi=$false
+            function Get-Partition {
+              [CmdletBinding()]param([int]$DiskNumber,[int]$PartitionNumber,[string]$DriveLetter)
+              [pscustomobject]@{DiskNumber=99;PartitionNumber=1;IsActive=$true;IsBoot=$false;IsSystem=$false;MbrType=$(if($script:efi){239}else{12});DriveLetter=$(if($script:removed){[char]0}else{'U'})}
+            }
+            function Get-Volume { [CmdletBinding()]param([string]$DriveLetter) [pscustomobject]@{UniqueId='\\?\Volume{11111111-1111-1111-1111-111111111111}\';FileSystem='FAT32'} }
+            function Remove-PartitionAccessPath {
+              [CmdletBinding()]param([Parameter(ValueFromPipeline=$true)]$InputObject,[string]$AccessPath)
+              process {if($InputObject.DiskNumber -ne 99 -or $AccessPath -cne 'U:\'){throw 'Wrong partition or access path'};$script:removed=$true}
+            }
+            function Set-Partition {
+              [CmdletBinding()]param([int]$DiskNumber,[int]$PartitionNumber,[uint16]$MbrType)
+              if(!$script:removed -or $DiskNumber -ne 99 -or $PartitionNumber -ne 1 -or $MbrType -ne 239){throw 'Wrong hide transition'};$script:efi=$true
+            }
+            """;
+        check((await ps.PowerShell(hideFixture+"\n"+hideScript+"\nif(!$script:removed -or !$script:efi){throw 'Boot remained visible'};'BOOT_HIDDEN'")).Contains("BOOT_HIDDEN"),
+            "Native PowerShell executes the guarded EFI-type and drive-letter transition in order (all storage commands mocked)");
+        var invalidHide=hideFixture.Replace("FileSystem='FAT32'","FileSystem='NTFS'")+"\ntry{\n"+hideScript+"\nthrow 'Expected hide refusal'}catch{if($script:removed -or $script:efi -or $_.Exception.Message -eq 'Expected hide refusal'){throw};'WRONG_VOLUME_BLOCKED'}";
+        check((await ps.PowerShell(invalidHide)).Contains("WRONG_VOLUME_BLOCKED"),"A changed boot volume prevents either hide mutation (storage commands mocked)");
         var changed=simulation.Replace("__STYLE__","MBR")+"\n$script:swap=$true;try{\n"+script+"\n;throw 'Expected swap rejection'}catch{if($_.Exception.Message -notlike '*identity or safety state changed*' -or $script:created -ne 0){throw};'SWAP_BLOCKED_BEFORE_PARTITION'}";
         check((await ps.PowerShell(changed)).Contains("SWAP_BLOCKED_BEFORE_PARTITION"),"device substitution after clear is rejected before any new partition is created (storage commands mocked)");
         // Replace only the external executable boundary; no host storage mutation.

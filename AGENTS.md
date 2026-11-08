@@ -1,0 +1,15 @@
+# Standalone TechLoungeOS Builder
+
+This is a separate application repository. Keep TechLoungeTweaks integration as a supplied payload and retain its existing release unchanged.
+
+Read TechLoungeOS/AGENTS.md, COMPATIBILITY.md and TEST-RESULTS.md before changing the builder. Preserve original ISOs and unrelated disks/mounts. Do not publish, push, merge, create a remote PR or release without explicit approval. Do not run the separate TechLoungeTweaks release.py workflow here.
+
+Use a feature branch, incremental implementation and observable tests. Never write to a physical disk during automated tests. Native destructive tests must use an explicitly owned disposable virtual USB disk inside the isolated VM. Update docs and RELEASE-NOTES.md. Label fixtures, real VM checks and incomplete release gates separately.
+
+Validation storage is a limited resource. Before creating/downloading any large test artifact, inspect actual free space and existing generated files. Keep only the active VM and required backing chain, one current build workspace, one latest known-good ISO and small test evidence. Do not accumulate successive full disk/WIM/ISO copies or duplicate audit-CD payloads. Aim to keep D:\TechLoungeOS-validation below 300 GiB and leave at least 100 GiB host free space before starting additional large tests; if current dependencies exceed that budget, stop new allocations and reclaim obsolete artifacts safely first. Check C: as well as D:. Never remove an image opened by a VM/host mount or any backing image. Preserve original downloads, code, reports and logs. Record cleanup and actual free-space deltas. If automatic approval review blocks cleanup, explain that limitation and provide a reviewable guarded plan rather than bypassing it or continuing to consume disk space.
+
+Keep VM disks and build outputs on genuinely local, non-cloud paths. Inspect Offline/Recall attributes without recalling obsolete large images. A zombie QEMU main thread or empty command line does not establish disk release: inspect all threads and open image handles before reuse or cleanup. Never bypass image locks. Retain logs and use normal Windows shutdown after servicing completes.
+
+Guarded cleanup scripts must set `$ErrorActionPreference='Stop'` before validation and deletion. PowerShell7 can deserialize ISO timestamps into DateTime objects; cast JSON fields to `[DateTime]` and use UTC explicitly instead of parsing an implicit localised string. A failed guard must stop the operation. Record any guard failure separately from checks completed afterwards.
+
+On 1 November 2026 the user explicitly authorised an optional NTLite-style overwrite of a chosen existing/original ISO. This supersedes unconditional original-file preservation only when the app user chooses that destination and confirms replacement. Stage and verify the new image first, detect destination changes, and retain a recovery backup until readback succeeds. Automated tests must still keep the real original downloads untouched and use disposable fixtures for replacement.

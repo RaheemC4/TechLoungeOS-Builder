@@ -27,7 +27,7 @@ internal static class IsoOutput
         if(Directory.Exists(path))throw new IOException("Choose an ISO filename, not a folder.");
         return new(path,File.Exists(path)?BootableDrive.Hash(path):null);
     }
-    internal static void Commit(string verifiedIso,Destination destination)
+    internal static string Commit(string verifiedIso,Destination destination)
     {
         verifiedIso=Path.GetFullPath(verifiedIso);Unlinked(verifiedIso);Unlinked(destination.Path);
         if(verifiedIso.Equals(destination.Path,StringComparison.OrdinalIgnoreCase) || !Path.GetDirectoryName(verifiedIso)!.Equals(Path.GetDirectoryName(destination.Path),StringComparison.OrdinalIgnoreCase))
@@ -53,6 +53,7 @@ internal static class IsoOutput
             if(!BootableDrive.Hash(backup).Equals(destination.PreviousHash,StringComparison.OrdinalIgnoreCase))throw new IOException("The saved ISO is verified, but the previous-file backup changed. It was retained at "+backup);
             File.Delete(backup);
         }
+        return expected;
     }
     internal static void RemoveTemporary(string iso,string expectedHash)
     {
@@ -63,4 +64,4 @@ internal static class IsoOutput
     }
 }
 
-internal record UsbBuildResult(string Iso,bool Temporary);
+internal record UsbBuildResult(string? Iso,string? MediaWorkspace=null,string? IsoSha256=null);

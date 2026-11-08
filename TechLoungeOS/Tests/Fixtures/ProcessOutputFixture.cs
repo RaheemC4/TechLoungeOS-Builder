@@ -10,6 +10,6 @@ internal static class ProcessOutputFixture
         var bytes = encoding.GetBytes(text + Environment.NewLine);
         Console.OpenStandardOutput().Write(bytes, 0, bytes.Length);
         Console.OpenStandardError().Write(bytes, 0, bytes.Length);
-        return args[1] == "error" ? 7 : 0;
+        return args[1] == "error" ? 7 : args[1] == "device-lost" ? 433 : 0;
     }
 }

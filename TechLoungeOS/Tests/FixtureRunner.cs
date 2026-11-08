@@ -1,12 +1,12 @@
 using TechLoungeOS;
 
 // A filesystem fixture, not evidence of DISM or Windows installation compatibility.
-sealed class FixtureRunner(string workspace, bool failRemoval = false, bool failExport = false, Action<string[]>? afterDism = null, bool ignoreRemoval = false, bool failInventory = false, bool failPostFeatureInventory = false, bool inheritedSetup = false, Queue<string>? healthResults = null, bool missingFramework = false, bool failVerification = false) : ICommandRunner
+sealed class FixtureRunner(string workspace, bool failRemoval = false, bool failExport = false, Action<string[]>? afterDism = null, bool ignoreRemoval = false, bool failInventory = false, bool failPostFeatureInventory = false, bool inheritedSetup = false, Queue<string>? healthResults = null, bool missingFramework = false, bool failVerification = false, bool packageAbsent = false, bool initiallyDisabledFeature = false) : ICommandRunner
 {
     public List<string[]> Commands { get; } = [];
     public List<string> Scripts { get; } = [];
-    private bool packageRemoved;
-    private bool featureDisabled;
+    private bool packageRemoved = packageAbsent;
+    private bool featureDisabled = initiallyDisabledFeature;
     public Task<string> PowerShell(string script, CancellationToken ct = default)
     {
         Scripts.Add(script);
@@ -50,6 +50,9 @@ sealed class FixtureRunner(string workspace, bool failRemoval = false, bool fail
             }
             var profile=Path.Combine(workspace,@"mount\Users\Default\NTUSER.DAT");
             if(!File.Exists(profile))SettingsChecks.WriteHive(profile,@"Software\FixtureVendor",42);
+            var software=Path.Combine(workspace,@"mount\Windows\System32\config\SOFTWARE");
+            if(!File.Exists(software))SettingsChecks.WriteValues(software,[
+                (@"Microsoft\Windows\CurrentVersion\Explorer\FolderTypes\{885a186e-a440-4ada-812b-db871b942259}\TopViews\{00000000-0000-0000-0000-000000000000}","GroupBy",1,System.Text.Encoding.Unicode.GetBytes("System.DateModified\0"))]);
         }
         if(args.Contains("/Mount-Image")&&!missingFramework){
             var framework=Path.Combine(workspace,@"mount\Windows\Microsoft.NET\Framework64\v4.0.30319\mscorlib.dll");Directory.CreateDirectory(Path.GetDirectoryName(framework)!);File.WriteAllText(framework,"inert Windows Framework prerequisite fixture");
@@ -74,7 +77,7 @@ sealed class FixtureRunner(string workspace, bool failRemoval = false, bool fail
         if(Path.GetFileName(exe)=="wimlib-imagex.exe")
         {
             var packed=Path.Combine(workspace,"packed-install.esd");
-            if(!values.SequenceEqual(new[]{"export",Path.Combine(workspace,"selected.wim"),"1",packed,"--solid","--threads=2","--check"}))throw new Exception("Unexpected compressor fixture request");
+            if(values.Length!=7||!values.Take(5).SequenceEqual(new[]{"export",Path.Combine(workspace,"selected.wim"),"1",packed,"--solid"})||!System.Text.RegularExpressions.Regex.IsMatch(values[5],"^--threads=[1-8]$")||values[6]!="--check")throw new Exception("Unexpected compressor fixture request");
             File.WriteAllText(packed,"inert packed image fixture");return Task.FromResult("");
         }
         if(Path.GetFileName(exe) is not ("oscdimg.exe" or "inert-oscdimg-fixture") || !values[^1].EndsWith(".partial.iso",StringComparison.Ordinal))throw new Exception("Unexpected executable fixture request");

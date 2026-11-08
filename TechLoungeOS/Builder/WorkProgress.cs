@@ -37,7 +37,7 @@ internal sealed class WorkProgress
     {
         var s when s.StartsWith("Preparing the required Microsoft")||s.StartsWith("Checking the selected")||s.StartsWith("Preparing build")||s.StartsWith("Checking Microsoft Windows updates")||s.StartsWith("Downloading and verifying")||s.StartsWith("Preparing compact NVIDIA")=>1,
         var s when s.StartsWith("Copying Windows")=>2,
-        var s when s.StartsWith("Creating your bootable ISO")||s.StartsWith("Creating ISO")||s.StartsWith("Checking every file")||s.StartsWith("Verifying ISO")||s.StartsWith("All files verified")||s.StartsWith("Finalising output")||s=="Complete"=>4,
+        var s when s.StartsWith("Creating your bootable ISO")||s.StartsWith("Creating ISO")||s.StartsWith("Checking every file")||s.StartsWith("Verifying ISO")||s.StartsWith("All files verified")||s.StartsWith("Finalising output")||s.StartsWith("USB media ready")||s=="Complete"=>4,
         _=>3
     };
     internal static string Duration(TimeSpan time)=>time.TotalHours>=1?((long)time.TotalHours).ToString(CultureInfo.InvariantCulture)+":"+time.ToString(@"mm\:ss"):time.ToString(@"mm\:ss");

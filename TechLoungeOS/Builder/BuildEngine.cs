@@ -32,7 +32,7 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
         ct.ThrowIfCancellationRequested();
         // Owned command-runner fixtures can omit downloads. Every real build enforces the standard inclusions.
         options=runnerFactory is null
-            ? options with{Apps=RecommendedApps.ForBuild(options.Apps),Target16GbUsb=true,IncludeNet8=RuntimePack.Net8Supported(DateOnly.FromDateTime(DateTime.UtcNow))}
+            ? options with{Apps=RecommendedApps.ForBuild(options.Apps),Target16GbUsb=options.ExportIso || options.UsbTargetBytes is null or <=16_000_000_000L,IncludeNet8=RuntimePack.Net8Supported(DateOnly.FromDateTime(DateTime.UtcNow))}
             : options with{Apps=RecommendedApps.NormalizeIds(options.Apps)};
         // Only controlled command-runner fixtures may omit the mandatory Office payload.
         if (runnerFactory == null && !options.IncludeOffice)
@@ -45,12 +45,12 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
             throw new InvalidOperationException("The setup wizard, gaming defaults, hardware-matched graphics queues and current Tweaks integration are required in every app-created ISO.");
         if (runnerFactory == null && string.IsNullOrWhiteSpace(options.TweaksFolder))
             throw new InvalidOperationException("TechLoungeTweaks integration is required. Extract the complete Builder package or choose its support folder.");
-        if(runnerFactory is null)
+        if(runnerFactory is null && options.ExportIso)
         {
             progress?.Report("Preparing the required Microsoft build component");
             options=options with{Oscdimg=await IsoTool.Ensure(options.Oscdimg,ct)};
         }
-        Policy.Validate(options);
+        Policy.Validate(options,requireIsoTool:options.ExportIso);
         if(runnerFactory is null)Preflight.ValidatePackage();
         if (options.TweaksFolder != null)
         {
@@ -72,29 +72,44 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
             throw new IOException("The Windows update plan does not match the selected edition version. Choose a matching plan before building.");
         ct.ThrowIfCancellationRequested();
         var work = Path.GetFullPath(options.Workspace);
+        log("Build workspace: "+work);
         Directory.CreateDirectory(work);
         using var exclusive = new FileStream(Path.Combine(work, "build.lock"), FileMode.CreateNew, FileAccess.Write, FileShare.None);
-        using var logFile = new StreamWriter(Path.Combine(work, "build.log")) { AutoFlush = true };
+        var logFile = new StreamWriter(Path.Combine(work, "build.log")) { AutoFlush = true };
         var logGate = new object();
-        void Write(string text) { lock (logGate) logFile.WriteLine($"{DateTimeOffset.Now:O} {text}"); log(text); }
+        void Write(string text) { log(text); lock (logGate) logFile.WriteLine($"{DateTimeOffset.Now:O} {text}"); }
+        void FailureLog(string text)
+        {
+            try{Write(text);}
+            catch(Exception error) when(error is IOException or UnauthorizedAccessException){log("Workspace log unavailable: "+error.Message);}
+        }
         var run = runnerFactory?.Invoke(Write) ?? new ProcessRunner(Write, Path.Combine(work, "scratch"));
         var media = Path.Combine(work, "media");
         var mount = Path.Combine(work, "mount");
         var wim = Path.Combine(work, "selected.wim");
         var journal = Path.Combine(work, "state.json");
+        var totalTime=System.Diagnostics.Stopwatch.StartNew();var phaseTime=System.Diagnostics.Stopwatch.StartNew();
+        string? currentPhase=null;var timings=new List<object>();
         void State(string phase)
         {
-            File.WriteAllText(journal + ".tmp", JsonSerializer.Serialize(new { phase, mount, wim, options, edition }, new JsonSerializerOptions { WriteIndented = true }));
+            if(currentPhase is not null)
+            {
+                var measurement=new{stage=currentPhase,seconds=Math.Round(phaseTime.Elapsed.TotalSeconds,3)};
+                timings.Add(measurement);Write("Stage timing: "+JsonSerializer.Serialize(measurement));
+            }
+            currentPhase=phase;phaseTime.Restart();
+            File.WriteAllText(journal + ".tmp", JsonSerializer.Serialize(new { phase, mount, wim, options, edition,elapsedSeconds=totalTime.Elapsed.TotalSeconds,timings }, new JsonSerializerOptions { WriteIndented = true }));
             // MoveFileEx overwrite can reject a reader even with delete sharing.
             if (File.Exists(journal)) File.Replace(journal + ".tmp", journal, null);
             else File.Move(journal + ".tmp", journal);
             progress?.Report(phase);
         }
-        State("Preparing build");
-        Directory.CreateDirectory(mount);
         var mounted = false;
+        Exception? failure=null;
         try
         {
+            State("Preparing build");
+            Directory.CreateDirectory(mount);
             if(options.UpdateWindows)
             {
                 State("Checking Microsoft Windows updates for the selected ISO");
@@ -114,43 +129,25 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
                 }
                 else Write("The source Windows version is at or above the latest offered stable cumulative update. No downgrade or unreviewed feature upgrade will be applied.");
             }
-            if(options.UseCurrentTweaksInstaller)
-            {
-                State("Downloading and verifying the current official TechLoungeTweaks installer");
-                await TweaksInstaller.Prepare(Path.Combine(work,"tweaks-installer"),ct);
-            }
             var nvidia = Path.Combine(work, "nvidia-setup");
-            if (NvidiaSetup.Enabled(options))
-            {
-                State("Preparing compact NVIDIA setup tools; drivers download after installation");
-                await NvidiaSetup.Prepare(nvidia, ct);
-            }
             var office = Path.Combine(work, "office-pack");
-            if (options.IncludeOffice)
-            {
-                State("Downloading and verifying offline Office payload");
-                await OfficePack.Prepare(run, office, options.OfficeSource, ct);
-            }
             var runtimes = Path.Combine(work, "runtime-pack");
-            if (options.IncludeRuntimePack)
-            {
-                State("Downloading and verifying offline runtime installers");
-                await RuntimePack.Prepare(run, runtimes, options.IncludeNet8, ct);
-            }
             var edge = Path.Combine(work, "edge-pack");
-            if (options.IncludeEdge)
-            {
-                State("Downloading and verifying offline Microsoft Edge");
-                await EdgePack.Prepare(run, edge, ct);
-            }
             var recommended = Path.Combine(work, "recommended-apps");
-            await AppRecipes.Prepare(options.Apps, recommended, ct);
             var hwinfo=Path.Combine(work,"hwinfo-pack");
+            var downloads=new List<BuildDownloads.Job>();
+            if(options.IncludeOffice)downloads.Add(new("Microsoft 365",token=>OfficePack.Prepare(run,office,options.OfficeSource,token)));
+            if(options.IncludeRuntimePack)downloads.Add(new("App and game runtimes",token=>RuntimePack.Prepare(run,runtimes,options.IncludeNet8,token)));
+            if(options.UseCurrentTweaksInstaller)downloads.Add(new("TechLoungeTweaks",token=>TweaksInstaller.Prepare(Path.Combine(work,"tweaks-installer"),token)));
+            if(NvidiaSetup.Enabled(options))downloads.Add(new("NVIDIA setup tools",token=>NvidiaSetup.Prepare(nvidia,token)));
+            if(options.IncludeEdge)downloads.Add(new("Microsoft Edge",token=>EdgePack.Prepare(run,edge,token)));
+            downloads.Add(new("Selected app files",token=>AppRecipes.Prepare(options.Apps,recommended,token)));
             if(options.Apps.Any(HwInfoPack.Is))
-            {
-                State("Downloading and verifying selected HWiNFO for quiet Windows Setup installation");
-                await HwInfoPack.Prepare(run,hwinfo,ct);
-            }
+                downloads.Add(new("HWiNFO",token=>HwInfoPack.Prepare(run,hwinfo,token)));
+            State("Downloading and verifying build prerequisites");
+            var downloadConcurrency=BuildResources.DownloadConcurrency(BuildResources.AvailableMemory());
+            Write($"Prerequisite scheduling: {downloadConcurrency} independent job(s); WinGet downloads stay serial within their runtime job.");
+            await BuildDownloads.Prepare(downloads,Write,ct,downloadConcurrency);
             State("Copying Windows installation media");
             await run.PowerShell($$"""
                 $iso = {{Q(Path.GetFullPath(options.Iso))}}
@@ -198,37 +195,43 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
                     throw new IOException("The serviced image metadata does not match its verified Windows version. No ISO will be exported.");
             }
             var completedWim=wim;
-            if(updatePlan is not null || Path.GetExtension(source).Equals(".esd",StringComparison.OrdinalIgnoreCase) ||
-                (options.Target16GbUsb && BootableDrive.ProjectedUsbBytes(media,source,wim)>BootableDrive.Target16GbBytes))
+            if(WimPacking.Needed(options,BootableDrive.ProjectedUsbBytes(media,source,wim,options.UsbTargetBytes)))
             {
                 State("Compressing the installation image");
                 completedWim=await WimPacking.Compact(run,wim,work,version,Write,ct);
             }
+            else Write("The accepted Windows image already fits the target. Reusing its existing compression without recompressing its files.");
             // ISO files may carry the read-only attribute into our private media copy.
             File.SetAttributes(source, File.GetAttributes(source) & ~FileAttributes.ReadOnly);
             File.Delete(source);
             File.Move(completedWim, Path.Combine(media,"sources",Path.GetExtension(completedWim).Equals(".esd",StringComparison.OrdinalIgnoreCase)?"install.esd":"install.wim"));
-            State("Preparing Windows Setup compatibility defaults");
-            await SetupCompatibility.Prepare(run, media, work, Write, ct);
-            State("Creating ISO");
+            if(!options.AnimatedWinPe)
+            {
+                State("Preparing Windows Setup compatibility defaults");
+                await SetupCompatibility.Prepare(run, media, work, Write, ct);
+            }
             ct.ThrowIfCancellationRequested();
             if (options.Target16GbUsb) BootableDrive.Check16GbTarget(media, Write);
-            await IsoExport.Create(run, media, options.Output, options.Oscdimg, Write, ct, State);
+            if(options.ExportIso)
+            {
+                State("Creating ISO");
+                await IsoExport.Create(run, media, options.Output, options.Oscdimg, Write, ct, State);
+            }
             if(completedWim!=wim)
             {
                 try{File.Delete(wim);}
                 catch(Exception cleanup) when(cleanup is IOException or UnauthorizedAccessException)
-                {Write("The ISO passed readback; its temporary unpacked WIM could not be removed: "+cleanup.Message);}
+                {Write("The customised files are ready; the temporary unpacked WIM could not be removed: "+cleanup.Message);}
             }
-            State("Complete");
-            Write("ISO exported. Installation and Secure Boot must still be validated in a VM.");
+            State(options.ExportIso?"Complete":"USB media ready");
+            Write(options.ExportIso?"ISO exported. Installation and Secure Boot must still be validated in a VM.":"Customised setup files ready for direct USB preparation. No temporary ISO was created.");
         }
         catch (Exception ex)
         {
-            Write(ex.ToString());
+            failure=ex;FailureLog(ex.ToString());
             try { State("Failed: " + ex.Message); }
             catch (Exception journalFailure) when (journalFailure is IOException or UnauthorizedAccessException)
-            { Write("Could not record failure in build journal: " + journalFailure.Message); }
+            { FailureLog("Could not record failure in build journal: " + journalFailure.Message); }
             throw;
         }
         finally
@@ -236,8 +239,11 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
             if (mounted)
             {
                 try { await run.Dism("/Unmount-Image", "/MountDir:" + mount, "/Discard"); Write("Uncommitted image discarded."); }
-                catch (Exception ex) { Write("Recovery required for " + mount + ": " + ex.Message); }
+                catch (Exception ex) { FailureLog("Recovery required for " + mount + ": " + ex.Message); }
             }
+            try{logFile.Dispose();}
+            catch(Exception closeFailure) when(failure is not null && closeFailure is IOException or UnauthorizedAccessException)
+            {log("Could not close the workspace log: "+closeFailure.Message);}
         }
     }
 
@@ -252,12 +258,13 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
         var office=Path.Combine(work,"office-pack");var runtimes=Path.Combine(work,"runtime-pack");
         var edge=Path.Combine(work,"edge-pack");var recommended=Path.Combine(work,"recommended-apps");
         var hwinfo=Path.Combine(work,"hwinfo-pack");var nvidia=Path.Combine(work,"nvidia-setup");
+        var initialWallpaper=InitialWallpaper.Stage(mount,options);
         if(options.AnimatedWinPe && prepareWinPe)
         {
             var regional=SetupRegional.FromImage(mount,options);
             File.WriteAllText(Path.Combine(work,"setup-regional.json"),JsonSerializer.Serialize(regional));
             State("Checking and preparing the WinPE setup and tools interface");
-            await WinPeBackground.Prepare(run,media,work,Write,ct,regional);
+            await WinPeBackground.Prepare(run,media,work,Write,ct,regional,initialWallpaper);
             State("Servicing");
         }
         var profile = SourcePreservation.Classify(options.Iso, [edition.ImageName], mount);
@@ -281,15 +288,16 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
             Write("Source warning: " + dependency.Key + " not found at its standard path. Presence checks do not establish health; this builder cannot restore stripped dependencies.");
         if (options.TweaksFolder != null && !Provisioning.HasImageRuntime(mount) && !Provisioning.HasPrivateRuntime(options.TweaksFolder))
             throw new IOException("This source has no WebView2 runtime files at the supported image paths. Choose a trusted TechLoungeTweaks integration bundle containing a complete x64 WebView2Runtime folder, or deselect Tweaks integration. System components will not be restored automatically.");
+        WindowsImageUpdates.VerifiedHealthScan? updatedHealth=null;
         if(updatePlan != null)
         {
             State("Updating Windows and checking source preservation");
-            version = await WindowsImageUpdates.Apply(run,mount,work,updateFolder!,updatePlan,version,Write,ct,serviceReader);
+            version = await WindowsImageUpdates.Apply(run,mount,work,updateFolder!,updatePlan,version,Write,ct,serviceReader,verifiedHealth:health=>updatedHealth=health);
             State("Servicing");
         }
         await WindowsRecovery.ValidateSource(run,mount);
         await LegacyNetwork.ValidateSource(run,mount);
-        await ImageServicing.Run(run, mount, options, Write, ct, serviceReader);
+        await ImageServicing.Run(run, mount, options, Write, ct, serviceReader,updatedHealth);
         var storeXbox = Path.Combine(work, "store-xbox");
         if (options.IncludeStoreXbox)
         {
@@ -301,7 +309,6 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
         if (options.Apps.Any(AppRecipes.NeedsPayload))
         {
             Provisioning.CopyTree(recommended, Path.Combine(mount, @"ProgramData\TechLoungeOS\Recommended"));
-            Provisioning.WriteHashes(Path.Combine(mount, @"ProgramData\TechLoungeOS"));
         }
         const bool setupRequested = true; // Global desktop defaults also require the preserved setup hook.
         var hadOemHook = setupRequested && SetupHooks.Prepare(media, mount);
@@ -317,6 +324,7 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
         if (options.IncludeRuntimePack) desktopInstallers.Add(RuntimePack.Stage(mount, runtimes));
         if (options.IncludeStoreXbox) desktopInstallers.Add(RuntimePack.AddSetupCommand(mount, "TechLoungeOS-StoreXbox", storeXbox));
         var preparedUserPolicyHash=RecommendedDefaultUser.Stage(mount,options.TweaksFolder!=null);
+        LockScreen.Stage(mount);
         DesktopDefaults.StageMachine(mount);
         desktopInstallers.Add(LegacyNetwork.Stage(mount));
         desktopInstallers.Add(WindowsRecovery.Stage(mount));
@@ -329,6 +337,7 @@ public sealed class BuildEngine(Action<string> log, Func<Action<string>, IComman
         }
         if (NvidiaSetup.Enabled(options)) NvidiaSetup.Stage(mount, options.TweaksFolder!, nvidia);
         if (options.IncludeAmdIntelGraphics) GraphicsSetup.Stage(mount);
+        SourcePresentation.Stage(mount,options,Write);
         if (options.IncludeOffice || hadOemHook) SetupHooks.FinalizeOem(media, mount);
         if (setupRequested) Provisioning.WriteHashes(Path.Combine(mount, @"ProgramData\TechLoungeOS"));
         var stagedConfiguration=serviceReader?.Invoke(mount) ?? SourcePreservation.CaptureConfiguration(mount);

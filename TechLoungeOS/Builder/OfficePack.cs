@@ -29,7 +29,7 @@ public static class OfficePack
         if (supplied != null)
         {
             Policy.RequireUnlinkedPath(supplied);
-            Provisioning.CopyTree(Path.Combine(supplied, "Office"), Path.Combine(folder, "Office"));
+            _ = CopyCache(supplied,folder,ct);
         }
         // Refresh the signed tool even when reusing cached Office data.
         {
@@ -52,6 +52,43 @@ public static class OfficePack
         var filesToHash = Directory.EnumerateFiles(Path.Combine(folder, "Office"), "*", SearchOption.AllDirectories)
             .Concat(new[] { setup, Path.Combine(folder, "TechLoungeOS-Office.template.xml") });
         File.WriteAllText(Path.Combine(folder, "TechLoungeOS-Office.sha256.json"), JsonSerializer.Serialize(filesToHash.ToDictionary(f => Path.GetRelativePath(folder, f), RuntimePack.Hash)));
+    }
+
+    internal static bool CopyCache(string source,string destination,CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        var receipt=Path.Combine(source,"TechLoungeOS-Office.sha256.json");
+        // Explicit user-supplied ODT folders retain their existing import route.
+        // Automatically reused Builder folders always carry this receipt.
+        if(!File.Exists(receipt))
+        {Provisioning.CopyTree(Path.Combine(source,"Office"),Path.Combine(destination,"Office"));return true;}
+        var leases=new List<FileStream>();
+        try
+        {
+            try
+            {
+                Policy.RequireUnlinkedPath(source);SourcePreservation.RequireImageFile(receipt,2,65536);
+                var manifest=new FileStream(receipt,FileMode.Open,FileAccess.Read,FileShare.Read);leases.Add(manifest);
+                using var json=JsonDocument.Parse(manifest);
+                var names=new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                foreach(var entry in json.RootElement.EnumerateObject())
+                {
+                    if(!DesktopSetup.Relative(entry.Name)||!names.Add(entry.Name)||
+                        !(entry.Name.StartsWith(@"Office\",StringComparison.OrdinalIgnoreCase)||entry.Name is "setup.exe" or "TechLoungeOS-Office.template.xml")||
+                        entry.Value.ValueKind!=JsonValueKind.String||!Regex.IsMatch(entry.Value.GetString()!,@"\A[0-9A-Fa-f]{64}\z"))return false;
+                    var path=Path.Combine(source,entry.Name);Policy.RequireUnlinkedPath(path);
+                    leases.Add(new FileStream(path,FileMode.Open,FileAccess.Read,FileShare.Read));
+                    if(!UsbFileTransfer.Hash(path,ct,static _=>{}).Equals(entry.Value.GetString(),StringComparison.OrdinalIgnoreCase))return false;
+                }
+                _=ValidateFiles(source);
+                foreach(var file in Directory.EnumerateFiles(Path.Combine(source,"Office"),"*",SearchOption.AllDirectories))
+                    if(!names.Contains(Path.GetRelativePath(source,file)))return false;
+            }
+            catch(Exception error) when(error is IOException or UnauthorizedAccessException or JsonException or InvalidOperationException){return false;}
+            // Hold the checked files against mutation until their private copy finishes.
+            Provisioning.CopyTree(Path.Combine(source,"Office"),Path.Combine(destination,"Office"));return true;
+        }
+        finally{foreach(var lease in leases)lease.Dispose();}
     }
 
     public static string ToolUrl(string html)

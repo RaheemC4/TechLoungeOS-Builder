@@ -1,4 +1,4 @@
-TechLoungeOS Builder 0.1.40
+TechLoungeOS Builder 0.1.46
 
 Extract the whole package and open TechLoungeOS.Builder.exe. Keep its support
 folders beside it. The Builder needs Windows 11 x64, administrator permission
@@ -16,6 +16,11 @@ there is no separate ADK installation or tool-path selection.
 The original ISO is kept unless you explicitly select and confirm replacement.
 The app checks media size and working space. A 16 GB USB must have sufficient
 actual capacity; components are never removed automatically just to make it fit.
+
+USB-only creation writes prepared setup files directly, without exporting and
+extracting another ISO. Larger USBs have one visible NTFS setup drive using the
+remaining space, plus a small hidden FAT32 boot partition. Copying and checking
+show real byte progress; remaining time appears only when it can be estimated.
 
 WinPE lets you choose an initial local account and optional PC name/password.
 Automatic sign-in and later Hello enrolment are separate choices. Additional

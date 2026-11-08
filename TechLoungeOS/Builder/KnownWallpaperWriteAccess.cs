@@ -56,7 +56,7 @@ internal static class KnownWallpaperWriteAccess
         var parent=Path.GetDirectoryName(target)!;
         var paths=new[]{target,active,parent,temporary}.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var originals=paths.ToDictionary(path=>path,ReadSecurity,StringComparer.OrdinalIgnoreCase);
-        var attributes=new[]{target,active}.ToDictionary(path=>path,File.GetAttributes,StringComparer.OrdinalIgnoreCase);
+        var attributes=new[]{target,active}.Distinct(StringComparer.OrdinalIgnoreCase).ToDictionary(path=>path,File.GetAttributes,StringComparer.OrdinalIgnoreCase);
         File.WriteAllText(Path.Combine(evidence,"permissions.json"),System.Text.Json.JsonSerializer.Serialize(originals.ToDictionary(x=>x.Key,x=>Convert.ToBase64String(x.Value))));
         // The temporary staging file is ours; source-file and parent security must round-trip exactly.
         Exception? primary=null;var cleanup=new List<Exception>();
@@ -109,6 +109,10 @@ internal static class KnownWallpaperWriteAccess
     internal static void RequireSameSecurity(string path,byte[] expected)
     {
         if(SecurityKey(ReadSecurity(path))!=SecurityKey(expected))throw new IOException("Private file security readback mismatch: "+path);
+    }
+    internal static void RestoreSecurity(string path,byte[] expected)
+    {
+        SetSecurity(path,expected,15);RequireSameSecurity(path,expected);
     }
     private static SafeFileHandle OpenSecurity(string path)
     {

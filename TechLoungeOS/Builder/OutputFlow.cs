@@ -5,6 +5,19 @@ namespace TechLoungeOS;
 
 public partial class MainWindow
 {
+    private string? completedOfficeCache;
+    internal static string? ReusableOfficeCache(string? folder,IEnumerable<string>? excludedVolumes)
+    {
+        if(folder is null)return null;
+        try
+        {
+            if(!Path.IsPathFullyQualified(folder)||folder.StartsWith(@"\\",StringComparison.Ordinal)||
+                (excludedVolumes?.Contains(Path.GetPathRoot(folder)![..1],StringComparer.OrdinalIgnoreCase)??false))return null;
+            Policy.RequireUnlinkedPath(folder);OfficePack.ValidateFiles(folder);
+            return File.Exists(Path.Combine(folder,"TechLoungeOS-Office.sha256.json"))?folder:null;
+        }
+        catch(Exception error) when(error is IOException or UnauthorizedAccessException){return null;}
+    }
     private int OutputModeIndex=>IsoOutputChoice?.IsChecked==true?1:BothOutput?.IsChecked==true?2:0;
     private void OutputModeChanged(object sender,RoutedEventArgs e)
     {
@@ -42,6 +55,7 @@ public partial class MainWindow
         if(WallpaperMode.SelectedIndex==1 && string.IsNullOrWhiteSpace(WallpaperPath.Text))throw new IOException("Choose a background image, a preset, or Keep source background.");
         if(!Directory.Exists(BundledTweaksFolder))throw new IOException("Required support files are missing. Keep the complete Builder folder together, including its integration folder.");
         var work=WorkspaceStorage.NewPath("build",checked(new FileInfo(IsoPath.Text).Length*5+(40L<<30)+(UpdateWindowsImage.IsChecked==true?40L<<30:0)),excludedVolumes);
+        var office=ReusableOfficeCache(completedOfficeCache,excludedVolumes);
         return new(IsoPath.Text,edition.ImageIndex,work,output,IsoTool.CachePath,
             Components.Children.Cast<CheckBox>().Where(c=>c.IsChecked==true).Select(c=>(Component)c.Tag).ToArray(),selectedApps.Select(a=>a.Id).ToArray(),true,true,BundledTweaksFolder)
         {
@@ -50,38 +64,42 @@ public partial class MainWindow
             UseCurrentTweaksInstaller=true,IncludeAmdIntelGraphics=true,IncludeNvidiaSetup=true,Target16GbUsb=true,
             IncludeRuntimePack=true,IncludeNet8=true,IncludeStoreXbox=true,IncludeOffice=true,AnimatedWinPe=true,
             StoreXboxPackages=null,
-            OfficeSource=null,
+            // ODT still resolves Current and verifies/refreshes the private copy.
+            OfficeSource=office,
             UpdateWindows=UpdateWindowsImage.IsChecked==true,
             SetupRegion=SetupRegionChoice.Choice?.Id,SetupKeyboard=SetupKeyboardChoice.Choice?.Id
         };
     }
-    private async Task<UsbBuildResult> BuildForUsb(string? saveTo,string[] excludedVolumes,CancellationToken ct,IProgress<string> progress)
+    private async Task<UsbBuildResult> BuildForUsb(string? saveTo,string[] excludedVolumes,long usbTargetBytes,CancellationToken ct,IProgress<string> progress)
     {
         var staged=saveTo is null?"":IsoOutput.StagingPath(saveTo);
-        var options=ReadBuildOptions(staged,excludedVolumes);
-        if(saveTo is null)options=options with{Output=Path.Combine(Path.GetDirectoryName(options.Workspace)!,".tlos-"+Guid.NewGuid().ToString("N")+".iso")};
+        var options=ReadBuildOptions(staged,excludedVolumes) with {
+            UsbTargetBytes=usbTargetBytes,
+            // Saved ISOs retain the conservative target. USB-only builds use the
+            // selected drive's real capacity, without dropping any payloads.
+            Target16GbUsb=saveTo is not null || usbTargetBytes<=16_000_000_000L
+        };
+        if(saveTo is null)
+        {
+            options=options with{ExportIso=false,Output=Path.Combine(Path.GetDirectoryName(options.Workspace)!,".tlos-"+Guid.NewGuid().ToString("N")+".iso")};
+            await RunBuildCore(options,ct,progress);
+            return new(null,options.Workspace);
+        }
         return await BuildOutput(options,saveTo,ct,progress);
     }
-    private async Task<UsbBuildResult> BuildOutput(BuildOptions options,string? saveTo,CancellationToken ct,IProgress<string>? progress=null)
+    private async Task<UsbBuildResult> BuildOutput(BuildOptions options,string saveTo,CancellationToken ct,IProgress<string>? progress=null)
     {
-        IsoOutput.Destination? destination=null;
-        if(saveTo is not null)
-        {
-            SetBusy(true);
-            try{destination=await Task.Run(()=>IsoOutput.Capture(saveTo),ct);}
-            finally{SetBusy(false);}
-        }
-        if(!await RunBuildCore(options,ct,progress))
-        {
-            ct.ThrowIfCancellationRequested();throw new IOException(Status.Text);
-        }
-        if(destination is null)return new(options.Output,true);
+        SetBusy(true);
+        IsoOutput.Destination destination;
+        try{destination=await Task.Run(()=>IsoOutput.Capture(saveTo),ct);}
+        finally{SetBusy(false);}
+        await RunBuildCore(options,ct,progress);
         SetBusy(true);Status.Text="Saving your verified ISO…";progress?.Report(Status.Text);
         try
         {
             // A cancellation never interrupts atomic replacement of a verified image.
             ct.ThrowIfCancellationRequested();
-            await Task.Run(()=>IsoOutput.Commit(options.Output,destination));
+            var exportedHash=await Task.Run(()=>IsoOutput.Commit(options.Output,destination));
             OutputPath.Text=destination.Path;
             Status.Text="Your customised ISO is ready.";
             if(destination.Path.Equals(Path.GetFullPath(options.Iso),StringComparison.OrdinalIgnoreCase))
@@ -91,8 +109,8 @@ public partial class MainWindow
                 var editions=await new BuildEngine(Write).Import(destination.Path);
                 Editions.ItemsSource=editions;Editions.IsEnabled=editions.Length>0;Editions.SelectedIndex=0;
             }
-            ShowExportReady(destination.Path);
-            return new(destination.Path,false);
+            ShowExportReady(destination.Path,options.Workspace,exportedHash);
+            return new(destination.Path,options.Workspace,exportedHash);
         }
         finally{SetBusy(false);}
     }

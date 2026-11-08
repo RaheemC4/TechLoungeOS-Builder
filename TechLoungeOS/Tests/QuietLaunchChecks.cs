@@ -12,6 +12,8 @@ static class QuietLaunchChecks
         }
         var run=new ProcessRunner(_=>{});
         await run.Run(Path.Combine(AppContext.BaseDirectory,"FirstLoginChecks.exe"),[folder,Path.Combine(AppContext.BaseDirectory,"FirstLoginConsoleFixture.exe")]);
+        check(File.ReadAllText(Path.Combine(folder,"restart-completion-checks.txt")).Contains("past the former eight-second timeout"),
+            "completed setup retains Restart now and Later without auto-dismissal; Later closes without restarting Windows");
         check(File.Exists(Path.Combine(folder,"checks.txt"))&&File.ReadAllText(Path.Combine(folder,"bootstrap.log")).Contains("console=0"),
             "quiet launcher starts a real console child without a console, preserves Unicode/quotes/exit code, drains both pipes and scopes private WebView2 without launching Tweaks");
         check(File.ReadAllText(Path.Combine(folder,"desktop-gate-checks.txt")).Contains("stable, unstable and missing shell checks passed"),

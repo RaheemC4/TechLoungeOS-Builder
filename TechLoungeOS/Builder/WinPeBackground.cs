@@ -61,66 +61,43 @@ public static class WinPeBackground
         expected.Add(Path.GetRelativePath(mount,shell),Convert.ToHexString(SHA256.HashData(updated)));
         return expected;
     }
-    public static async Task Prepare(ICommandRunner run,string media,string work,Action<string> log,CancellationToken ct,SetupRegional? regional=null)
+    public static async Task Prepare(ICommandRunner run,string media,string work,Action<string> log,CancellationToken ct,SetupRegional? regional=null,string? initialWallpaper=null)
     {
         var source=Path.Combine(media,@"sources\boot.wim");
-        var candidate=Path.Combine(work,"animated-boot.wim");var mount=Path.Combine(work,"pe-mount");
         var bootIndex=WinPeImage.ReadBootIndex(source);
         log("Using the source Windows PE boot image at index "+bootIndex+".");
-        File.Copy(source,candidate,false);File.SetAttributes(candidate,File.GetAttributes(candidate)&~FileAttributes.ReadOnly);
-        Directory.CreateDirectory(mount);var mounted=false;
-        try
+        var answers=new[]{Path.Combine(media,"Autounattend.xml"),Path.Combine(media,@"sources\unattend.xml")}.Where(File.Exists).ToArray();
+        if(answers.Length>1)throw new IOException("Multiple source answer files need review before adding the account wizard.");
+        string? answer=null;
+        if(answers.Length==1){SourcePreservation.RequireImageFile(answers[0],0,2<<20);answer=File.ReadAllText(answers[0]);}
+        var marker=Path.Combine(media,"TechLoungeOS.media");
+        if(File.Exists(marker)||Directory.Exists(marker))throw new IOException("Installation media already contains a Builder session marker.");
+        var id=Guid.NewGuid().ToString("D");
+        var extra=new Dictionary<string,byte[]>(StringComparer.Ordinal)
         {
-            var answers=new[]{Path.Combine(media,"Autounattend.xml"),Path.Combine(media,@"sources\unattend.xml")}.Where(File.Exists).ToArray();
-            if(answers.Length>1)throw new IOException("Multiple source answer files need review before adding the account wizard.");
-            string? answer=null;
-            if(answers.Length==1){SourcePreservation.RequireImageFile(answers[0],0,2<<20);answer=File.ReadAllText(answers[0]);}
-            var marker=Path.Combine(media,"TechLoungeOS.media");
-            if(File.Exists(marker)||Directory.Exists(marker))throw new IOException("Installation media already contains a Builder session marker.");
-            var id=Guid.NewGuid().ToString("D");
-            var extra=new Dictionary<string,byte[]>(StringComparer.Ordinal)
-            {
-                ["account-auto.xml"]=Encoding.UTF8.GetBytes(SetupAnswerFile.Template(true,answer,regional)),
-                ["account-manual.xml"]=Encoding.UTF8.GetBytes(SetupAnswerFile.Template(false,answer,regional)),
-                ["media.id"]=Encoding.ASCII.GetBytes(id)
-            };
-            foreach(var font in new[]{"manrope-regular.ttf","manrope-semibold.ttf","OFL.txt"})
-            {
-                using var fontStream=typeof(WinPeBackground).Assembly.GetManifestResourceStream("TechLoungeOS.PeFonts."+font)??throw new IOException("The WinPE wizard font was not packaged: "+font);
-                using var fontBytes=new MemoryStream();fontStream.CopyTo(fontBytes);extra.Add(@"Fonts\"+font,fontBytes.ToArray());
-            }
-            // Use the WIM's marked boot image; never guess a different setup entry.
-            ct.ThrowIfCancellationRequested();mounted=true;
-            await run.Dism("/Mount-Image","/ImageFile:"+candidate,"/Index:"+bootIndex.ToString(System.Globalization.CultureInfo.InvariantCulture),"/MountDir:"+mount,"/CheckIntegrity");
-            log("Checking inherited WinPE tools and files before adding the background. This file verification can take several minutes.");
-            var before=Snapshot(mount,ct);
-            using var resource=typeof(WinPeBackground).Assembly.GetManifestResourceStream("TechLoungeOS.PeBackground.exe")??throw new IOException("Native WinPE background was not packaged.");
-            using var bytes=new MemoryStream();resource.CopyTo(bytes);
-            var expected=StageMounted(mount,bytes.ToArray(),extra,regional);
-            log("Verifying that the original WinPE tools stayed unchanged and only the background wrapper was added.");
-            var after=Snapshot(mount,ct);var shell=@"Windows\System32\winpeshl.ini";
-            foreach(var entry in before)
-                if(!entry.Key.Equals(shell,StringComparison.OrdinalIgnoreCase)&&(!after.TryGetValue(entry.Key,out var hash)||hash!=entry.Value))
-                    throw new IOException("An inherited WinPE file changed: "+entry.Key);
-            var added=after.Keys.Except(before.Keys,StringComparer.OrdinalIgnoreCase).ToArray();
-            if(expected.Any(entry=>!after.TryGetValue(entry.Key,out var hash)||hash!=entry.Value)||
-                !added.Order(StringComparer.OrdinalIgnoreCase).SequenceEqual(expected.Keys.Except(before.Keys,StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase),StringComparer.OrdinalIgnoreCase))throw new IOException("Windows PE payload verification failed or unexpected files were added.");
-            File.WriteAllText(Path.Combine(work,"pe-preservation.json"),JsonSerializer.Serialize(new{before,after,added,changed=before.ContainsKey(shell)?new[]{shell}:Array.Empty<string>()},new JsonSerializerOptions{WriteIndented=true}));
-            log("WinPE file preservation verified. Saving the background changes.");
-            ct.ThrowIfCancellationRequested();await run.Dism("/Unmount-Image","/MountDir:"+mount,"/Commit","/CheckIntegrity");mounted=false;
-            WinPeImage.PreserveWindowsMetadata(source,candidate);
-            if(WinPeImage.ReadBootIndex(candidate)!=bootIndex)throw new IOException("The saved Windows PE image changed its boot selection. The source boot image was kept.");
-            File.Copy(source,Path.Combine(work,"source-boot.wim"),false);
-            File.SetAttributes(source,File.GetAttributes(source)&~FileAttributes.ReadOnly);File.Move(candidate,source,true);
-            File.WriteAllText(marker,id,Encoding.ASCII);
-            log("Added the native WinPE account wizard. Existing shell entries and tools were retained; boot and account sign-in testing are still required.");
-        }
-        finally
+            ["account-auto.xml"]=Encoding.UTF8.GetBytes(SetupAnswerFile.Template(true,answer,regional,initialWallpaper)),
+            ["account-manual.xml"]=Encoding.UTF8.GetBytes(SetupAnswerFile.Template(false,answer,regional,initialWallpaper)),
+            ["media.id"]=Encoding.ASCII.GetBytes(id)
+        };
+        foreach(var font in new[]{"manrope-regular.ttf","manrope-semibold.ttf","OFL.txt"})
         {
-            if(mounted)
-                try{await run.Dism("/Unmount-Image","/MountDir:"+mount,"/Discard");}
-                catch(Exception ex){log("WinPE cleanup requires recovery at "+mount+": "+ex.Message);}
+            using var fontStream=typeof(WinPeBackground).Assembly.GetManifestResourceStream("TechLoungeOS.PeFonts."+font)??throw new IOException("The WinPE wizard font was not packaged: "+font);
+            using var fontBytes=new MemoryStream();fontStream.CopyTo(fontBytes);extra.Add(@"Fonts\"+font,fontBytes.ToArray());
         }
+        using var resource=typeof(WinPeBackground).Assembly.GetManifestResourceStream("TechLoungeOS.PeBackground.exe")??throw new IOException("Native WinPE background was not packaged.");
+        using var bytes=new MemoryStream();resource.CopyTo(bytes);
+        WinPeArtwork.StageMedia(media,Path.Combine(work,"setup-artwork"));
+        // One private WIM transaction prepares compatibility on every image and
+        // stages the interface only on the explicitly marked boot image.
+        await SetupCompatibility.PrepareWithBackground(run,media,work,log,ct,new(bootIndex,
+            mount=>StageMounted(mount,bytes.ToArray(),extra,regional),
+            (original,candidate)=>
+            {
+                WinPeImage.PreserveWindowsMetadata(original,candidate);
+                if(WinPeImage.ReadBootIndex(candidate)!=bootIndex)throw new IOException("The saved Windows PE image changed its boot selection. The source boot image was kept.");
+            }));
+        File.WriteAllText(marker,id,Encoding.ASCII);
+        log("Added the native WinPE account wizard. Existing shell entries and tools were retained; boot and account sign-in testing are still required.");
     }
     internal static string? KeyboardForImage(string mount,SetupRegional? regional)
     {

@@ -31,8 +31,8 @@ internal static class NativeBuildCheck
                 selector.ItemsSource = editions;
                 selector.SelectedItem = editions.Single(e => e.ImageIndex == options.Index);
                 ((TextBox)window.FindName("OutputPath")).Text = options.Output;
-                var method = typeof(MainWindow).GetMethod("RunBuild", BindingFlags.Instance | BindingFlags.NonPublic)!;
-                await (Task)method.Invoke(window, [options])!;
+                var method = typeof(MainWindow).GetMethod("RunBuildCore", BindingFlags.Instance | BindingFlags.NonPublic)!;
+                await (Task)method.Invoke(window, [options,CancellationToken.None,null])!;
                 var status = ((TextBlock)window.FindName("Status")).Text;
                 using var state = JsonDocument.Parse(File.ReadAllText(Path.Combine(options.Workspace, "state.json")));
                 if (!File.Exists(options.Output) || state.RootElement.GetProperty("phase").GetString() != "Complete")

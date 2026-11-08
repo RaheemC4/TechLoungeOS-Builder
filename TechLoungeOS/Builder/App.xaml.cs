@@ -16,7 +16,15 @@ public partial class App : Application
         ApplySystemAppearance();
         SystemParameters.StaticPropertyChanged += AppearanceChanged;
         base.OnStartup(e);
-        if(launchMainWindow){MainWindow=new MainWindow();MainWindow.Show();}
+        if(launchMainWindow)
+        {
+            MainWindow=new MainWindow();MainWindow.Show();
+            if(e.Args is ["--resume-usb",var checkpoint])Dispatcher.BeginInvoke(new Action(()=>
+            {
+                try{var usb=BootDriveWindow.ResumePrepared(checkpoint);usb.Owner=MainWindow;usb.ShowDialog();}
+                catch(Exception error){MessageBox.Show(MainWindow,error.Message,"Prepared setup unavailable",MessageBoxButton.OK,MessageBoxImage.Error);}
+            }));
+        }
     }
     protected override void OnExit(ExitEventArgs e)
     {

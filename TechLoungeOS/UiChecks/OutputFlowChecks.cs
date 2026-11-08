@@ -9,6 +9,14 @@ internal static class OutputFlowChecks
         var root=Path.Combine(Path.GetTempPath(),"TLOS-output-flow-"+Guid.NewGuid().ToString("N"));Directory.CreateDirectory(root);
         try
         {
+            var cache=Path.Combine(root,"office-cache");var officeData=Path.Combine(cache,"Office","Data");var versionFolder=Path.Combine(officeData,"16.0.10000.10000");Directory.CreateDirectory(versionFolder);
+            foreach(var name in new[]{"stream.x64.x-none.dat","stream.x64.en-us.dat","i640.cab","s640.cab"})File.WriteAllText(Path.Combine(versionFolder,name),"inert cache routing fixture");
+            File.WriteAllText(Path.Combine(officeData,"v64.cab"),"inert metadata fixture");
+            File.WriteAllText(Path.Combine(cache,"TechLoungeOS-Office.sha256.json"),"{}"); // Only cache selection is exercised; acquisition verifies all real receipt entries.
+            Require(MainWindow.ReusableOfficeCache(cache,[])==cache,"A completed same-session Office cache can seed ODT's fresh Current-channel resolution");
+            Require(MainWindow.ReusableOfficeCache(cache,[Path.GetPathRoot(cache)![..1]])==null,"A prior cache on a USB-excluded volume is not reused");
+            File.Delete(Path.Combine(versionFolder,"s640.cab"));
+            Require(MainWindow.ReusableOfficeCache(cache,[])==null&&MainWindow.ReusableOfficeCache(Path.Combine(root,"deleted-cache"),[])==null,"Missing/incomplete Office caches fall back to fresh acquisition without blocking the next build");
             var target=Path.Combine(root,"source.iso");File.WriteAllText(target,"original inert fixture");
             var original=IsoOutput.Capture(target);var staged=IsoOutput.StagingPath(target);File.WriteAllText(staged,"verified replacement fixture");
             IsoOutput.Commit(staged,original);
@@ -36,14 +44,27 @@ internal static class OutputFlowChecks
             foreach(var label in new[]{""," ","ABCDEFGHIJKL","bad\nlabel","bad'", "bad;format","USB💻"})Reject(()=>BootableDrive.VolumeLabel(label));
             var disk=new UsbDisk(9999,"fixture-only","fixture-only","fixture-only","Inert fixture",16_000_000_000,7,512,false,false,false,false,false,[]);
             Require(BootableDrive.FormatScript(disk,8L<<30,"raheem pc").Contains("-NewFileSystemLabel 'RAHEEM PC'"),"The validated custom label reaches the format script as a literal");
-            var window=new BootDriveWindow(target,(_,_,_,_)=>throw new Exception("Inert UI test must not build media"),saved);
+            var window=new BootDriveWindow(target,(_,_,_,_,_)=>throw new Exception("Inert UI test must not build media"),saved);
             try
             {
                 Require(window.FindName("Source") is TextBlock && ((TextBlock)window.FindName("Source")).Text=="source.iso","USB creation displays its imported source without an editable ISO picker");
                 Require(window.FindName("SaveIsoEnabled")==null && window.FindName("SaveIsoPath")==null,"The USB picker has no duplicate ISO-saving controls");
                 Require(window.FindName("WorkingFolder")==null && ((TextBox)window.FindName("UsbLabel")).Text=="TLOS_SETUP","USB temporary storage is automatic and the label is editable");
+                typeof(BootDriveWindow).GetMethod("Step",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)!.Invoke(window,[6]);
+                Require(((TextBlock)window.FindName("StepCaption")).Text=="Step 6 of 6 · Write and verify USB","Saved ISO plus USB counts six real stages without a midpoint confirmation stage");
             }
             finally{window.Close();}
+            foreach(var direct in new[]{false,true})
+            {
+                var compact=new BootDriveWindow(target,direct?(_,_,_,_,_)=>throw new Exception("Inert fixture never builds media"):null,null,false);
+                try
+                {
+                    var last=direct?5:2;
+                    typeof(BootDriveWindow).GetMethod("Step",System.Reflection.BindingFlags.NonPublic|System.Reflection.BindingFlags.Instance)!.Invoke(compact,[last]);
+                    Require(((TextBlock)compact.FindName("StepCaption")).Text==$"Step {last} of {last} · Write and verify USB","Direct and existing-ISO routes omit the temporary ISO and midpoint confirmation stages");
+                }
+                finally{compact.Close();}
+            }
             Console.WriteLine("Inert-file save/replace/race/cleanup and USB UI checks passed. No real ISO servicing, mount, USB write or VM execution.");
         }
         finally

@@ -129,6 +129,8 @@ namespace TechLoungeOS.FirstLogin
         private readonly Timer timer=new Timer {Interval=16};
         private readonly Stopwatch clock=Stopwatch.StartNew();
         private SetupProgressState state;
+        private double progress=-1;
+        internal double Progress {get{return progress;}set{progress=value;Invalidate();}}
         internal SetupProgressState State {
             get{return state;}
             set{bool changed=state!=value;state=value;timer.Enabled=state==SetupProgressState.Working&&Visible&&SetupProgress.Motion;if(changed)Invalidate();}
@@ -148,6 +150,7 @@ namespace TechLoungeOS.FirstLogin
                 try{
                     e.Graphics.SetClip(shape);
                     if(state==SetupProgressState.Complete){using(var brush=new SolidBrush(SystemInformation.HighContrast?SystemColors.Highlight:Color.FromArgb(143,195,249)))e.Graphics.FillPath(brush,shape);return;}
+                    if(progress>=0){using(var brush=new SolidBrush(SystemInformation.HighContrast?SystemColors.Highlight:Color.FromArgb(143,195,249)))e.Graphics.FillRectangle(brush,new RectangleF(0,bounds.Top,(float)(Width*Math.Min(1,progress)),height));return;}
                     float width=Math.Min(Width,Math.Max(42*scale,Width*.3f));
                     float position=SetupProgress.Motion?(float)(.5-.5*Math.Cos(clock.Elapsed.TotalSeconds*Math.PI/1.7)):0;
                     var band=new RectangleF(position*(Width-width),bounds.Top,width,height);

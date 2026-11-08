@@ -14,9 +14,11 @@ public static class Provisioning
         catch { Write-Warning 'Provisioning is already running or its state is inaccessible.'; exit 1 }
         $script:failures = New-Object 'System.Collections.Generic.List[string]'
         $script:warnings = New-Object 'System.Collections.Generic.List[string]'
+        $script:startedUtc=[DateTime]::UtcNow.ToString('o');$script:activeStep='';$script:stepStartedUtc=$script:startedUtc
         function Write-SetupProgress([string]$step,[string]$message,[string]$phase='installing') {
+          if($script:activeStep -cne $step){$script:activeStep=$step;$script:stepStartedUtc=[DateTime]::UtcNow.ToString('o')}
           $path=Join-Path $state 'progress.json';$temporary=$path+'.tmp'
-          $json=@{step=$step;message=$message;phase=$phase;updatedUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
+          $json=@{step=$step;message=$message;phase=$phase;updatedUtc=[DateTime]::UtcNow.ToString('o');startedUtc=$script:startedUtc;stepStartedUtc=$script:stepStartedUtc;completed=@(Get-ChildItem -LiteralPath $state -Filter '*.done' -File).Count}|ConvertTo-Json -Compress
           [IO.File]::WriteAllText($temporary,$json,[Text.UTF8Encoding]::new($false))
           if(Test-Path -LiteralPath $path){[IO.File]::Replace($temporary,$path,[NullString]::Value)}else{[IO.File]::Move($temporary,$path)}
         }
@@ -36,7 +38,7 @@ public static class Provisioning
         try {
         Start-Transcript -Path "$state\first-login.log" -Append
         $transcribing = $true
-        """ + (wallpaperLibrary ? WallpaperPresets.LibraryShortcut : "") + (wallpaperName != null ? Wallpaper.FirstLogin(wallpaperName) : WallpaperPresets.FirstLogin(wallpaperPreset)) + (desktopDefaults ? "\n"+DesktopDefaults.FirstLogin+"\n"+InputDefaults.Script : "") + (windowsRecovery || runtimePack || storeXbox || office || edge || legacyNetwork ? "\n"+DesktopSetup.FirstLogin+"\n" : "") + (windowsRecovery ? WindowsRecovery.FirstLogin : "") + (edge ? "\n" + EdgePack.FirstLogin : "") + (runtimePack ? "\n" + RuntimePack.FirstLoginCheck + "\n" + DefenderFirstLogin : "") + (storeXbox ? "\n" + StoreXbox.FirstLogin : "") + (office ? "\n" + OfficePack.FirstLogin : "") + (gameMode ? """
+        """ + SourcePresentation.FirstLogin + (wallpaperLibrary ? WallpaperPresets.LibraryShortcut : "") + (wallpaperName != null ? Wallpaper.FirstLogin(wallpaperName) : WallpaperPresets.FirstLogin(wallpaperPreset)) + (desktopDefaults ? "\n"+DesktopDefaults.FirstLogin+"\n"+InputDefaults.Script+LockScreen.FirstLogin : "") + (windowsRecovery || runtimePack || storeXbox || office || edge || legacyNetwork ? "\n"+DesktopSetup.FirstLogin+"\n" : "") + (windowsRecovery ? WindowsRecovery.FirstLogin : "") + (edge ? "\n" + EdgePack.FirstLogin : "") + (runtimePack ? "\n" + RuntimePack.FirstLoginCheck + "\n" + DefenderFirstLogin : "") + (storeXbox ? "\n" + StoreXbox.FirstLogin : "") + (gameMode ? """
 
           Invoke-Step 'game-mode' {
             New-Item 'HKCU:\Software\Microsoft\GameBar' -Force | Out-Null
@@ -52,7 +54,7 @@ public static class Provisioning
           Invoke-Step '{{a}}' {
             Install-WinGetApp {{Policy.Ps(a)}}
           }
-        """)) + (nvidia ? NvidiaSetup.FirstLogin : "") + (amdIntelGraphics ? GraphicsSetup.FirstLogin : "") + (desktopDefaults ? "\n"+DesktopSurface.FirstLogin(storeXbox) : "") + """
+        """)) + (office ? "\n" + DesktopSetup.OfficeFirstLogin + "\n" + OfficePack.FirstLogin : "") + (nvidia ? NvidiaSetup.FirstLogin : "") + (amdIntelGraphics ? GraphicsSetup.FirstLogin : "") + (desktopDefaults ? "\n"+DesktopSurface.FirstLogin(storeXbox) : "") + """
 
           $tweaks = Join-Path $env:ProgramData 'TechLoungeOS\TechLoungeTweaks\TechLoungeTweaks.exe'
           if (Test-Path $tweaks) { Invoke-Step 'tweaks-shortcut' {
@@ -160,7 +162,11 @@ public static class Provisioning
         Wallpaper.Validate(o.WallpaperFile);
         var wallpaperName = o.WallpaperFile == null ? null : "wallpaper" + Path.GetExtension(o.WallpaperFile).ToLowerInvariant();
         if (wallpaperName != null) File.Copy(o.WallpaperFile!, Path.Combine(folder, wallpaperName), false);
-        File.WriteAllText(Path.Combine(folder, "first-login.ps1"), Script(o.Apps, o.GameMode, o.DisableSuggestions, wallpaperName, o.IncludeRuntimePack, o.IncludeStoreXbox, o.IncludeOffice, o.TweaksFolder != null, NvidiaSetup.Enabled(o), o.IncludeAmdIntelGraphics, o.IncludeEdge, true, o.WallpaperFile == null ? o.WallpaperPreset : null, true, true,o.UseCurrentTweaksInstaller,true,true,false));
+        var script=Script(o.Apps, o.GameMode, o.DisableSuggestions, wallpaperName, o.IncludeRuntimePack, o.IncludeStoreXbox, o.IncludeOffice, o.TweaksFolder != null, NvidiaSetup.Enabled(o), o.IncludeAmdIntelGraphics, o.IncludeEdge, true, o.WallpaperFile == null ? o.WallpaperPreset : null, true, true,o.UseCurrentTweaksInstaller,true,true,false);
+        File.WriteAllText(Path.Combine(folder, "first-login.ps1"),script);
+        var progressSteps=System.Text.RegularExpressions.Regex.Matches(script,@"Invoke-Step '([A-Za-z0-9._-]+)'")
+            .Select(match=>match.Groups[1].Value).Where(id=>id is not ("hello-options" or "tweaks-shortcut" or "source-presentation")).Distinct(StringComparer.Ordinal).ToArray();
+        File.WriteAllText(Path.Combine(folder,"progress-plan.json"),JsonSerializer.Serialize(new{steps=progressSteps}));
         var startup = Path.Combine(mount, @"Users\Default\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup");
         Policy.RequireUnlinkedPath(startup);
         Directory.CreateDirectory(startup);

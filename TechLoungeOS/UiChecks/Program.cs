@@ -245,7 +245,7 @@ internal static class Program
         sourceBox.Text=readyPath;outputBox.Text=readyPath;
         if((string?)usbSource.Invoke(window,[false])!=readyPath)throw new Exception("USB creation must reuse the imported source instead of asking for it again.");
         sourceBox.Text=oldSource;outputBox.Text=oldOutput;
-        typeof(MainWindow).GetMethod("ShowExportReady",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(window,[readyPath]);
+        typeof(MainWindow).GetMethod("ShowExportReady",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(window,[readyPath,null,null]);
         if((string?)usbSource.Invoke(window,[true])!=readyPath || usbSource.Invoke(window,[false])!=null)throw new Exception("Only the explicit post-export action may prefill the completed ISO.");
         File.Delete(readyPath);
         var otherPath=Path.Combine(folder,"other-inert.iso");File.WriteAllText(otherPath,"Inert fixture, never mounted.");
@@ -254,7 +254,7 @@ internal static class Program
         outputBox.Text=oldOutput;File.Delete(otherPath);
         foreach(var size in new[]{new Size(1160,860),new Size(720,500)}){
             Layout(size);
-            typeof(MainWindow).GetMethod("ShowExportReady",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(window,[readyPath]);Layout(size);
+            typeof(MainWindow).GetMethod("ShowExportReady",BindingFlags.Instance|BindingFlags.NonPublic)!.Invoke(window,[readyPath,null,null]);Layout(size);
             var scroll=(ScrollViewer)window.FindName("SettingsScroll");
             Visible((Button)window.FindName("BuildButton"),size);
             Snapshot(size,$"builder-usb-next-{size.Width}x{size.Height}.png");

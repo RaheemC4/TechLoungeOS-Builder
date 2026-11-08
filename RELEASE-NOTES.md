@@ -1,3 +1,31 @@
+## 0.1.46 - faster preparation without dropping checks
+
+- Prepare up to two independent prerequisite downloads together, with lower concurrency on low-memory PCs; keep Windows servicing and USB writing serial.
+- Reuse verified Office data from a completed workspace in the same session while checking Microsoft's Current version again. Damaged caches fall back to a fresh download.
+- Reuse the immediately preceding successful update's full health scan once, on the same private image. Retain final health/preservation checks and full file verification.
+- Read large files more efficiently for checksums. Larger USB-only builds skip final solid compression when their complete media fits; saved ISO/small USB budgets remain enforced.
+- Clarify USB-ready instructions for reinstalling this PC or moving the drive to another PC.
+
+1,078 regressions, compiled interface/layout/Unicode checks and self-contained publication passed. Local checksum fixtures measured31-37% less hash time. This is not a measured whole-build or physical-write speedup; see TechLoungeOS/PERFORMANCE.md. The existing completed USB remains unchanged. The release records distinguish this patch from earlier installation and physical USB evidence.
+## 0.1.45 - first-start and graphics setup fixes
+
+- Repair the graphics readiness check that reported “Unknown fixed post-install action”. Detect NVIDIA hardware on the installed PC, verify its matching signed driver, install NVIDIA App from its official feed and read back the TechLounge profile. Required normal restarts stay explicit; no restart is forced.
+- Seed the reviewed Recommended user settings before profile creation and verify partially completed settings when retrying. Windows Update and Defender remain excluded; the overall Tweaks score also counts optional settings.
+- Recognise the confirmed Ghost WinPE startup background without touching the recovery image.
+- Stage the selected wallpaper for Windows Setup's first desktop. Replace only the inspected Ghost intro, restart and theme commands while retaining its other setup work and tools.
+- Add the approved clean blue-wave lock-screen image, retain Windows' sign-in controls and respect managed lock-screen policy.
+- Run Microsoft 365 after smaller selected apps, keep the setup completion window available, and show current activity with restart and retry controls.
+
+The current source passed 1,060 automated checks; compiled USB activity, completion layout and Unicode checks also passed. Driver/app/profile fixtures and live vendor metadata lookup are separate from installation on a physical GPU. A rebuilt image and native first-login acceptance of the new presentation and lock-screen paths are still required. Existing USBs are not updated by installing this app release.
+
+## 0.1.42 candidate - modified-image selections and drive errors
+
+- Skip removal commands for apps already absent and optional features already disabled or missing. Inherited source damage still blocks actual component changes; no stripped components are restored.
+- Check working storage with a private write, flush and readback before starting.
+- Keep the real native error and recovery location visible in saved USB diagnostics when a working drive disconnects.
+
+989 ordinary checks and the targeted compiled-interface checks passed. The complete native Ghost25H2 ISO build passed all1,115 exported-file checks and independent mounted-image preservation readback. The original ISO is unchanged. USB write/readback acceptance is recorded separately; this local candidate has not been published.
+
 ## 0.1.41 - USB build fixes and clear progress
 
 Includes the privately validated0.1.38/0.1.39 fixes below: automatic verified build tooling and the Ghost WinPE metadata-commit repair.
@@ -546,3 +574,20 @@ Actual native rendering reproduced transparent action corners (ARGB0) appearing 
 ## Next local candidate:0.1.28
 
 Version advanced for the next local package so users of0.1.27 can receive the corrected build later. The supported-update checkbox no longer says experimental after the exact approved Ghost25H2-to26H2 route completed servicing, boot, installation and recovery acceptance. This caption change does not expand the supported routes: unknown enablement paths, failed health checks and unexplained preservation differences remain hard stops. Full app release, broader standard-image acceptance and hosted update delivery remain unfinished. Current0.1.28 source is not yet a signed downloadable release.
+
+## 0.1.43 local candidate
+
+- Direct USB-only builds avoid temporary ISO export and extraction.
+- Reopen checked prepared setup files for another USB without rebuilding Windows.
+- Larger USBs use one visible full-size data volume and a small hidden boot partition.
+- Single upfront erase confirmation; live copied/checked byte totals and measured estimates.
+- New hidden-boot layout still needs physical replug/firmware acceptance; not yet published.
+
+## Local 0.1.44 candidate: clearer USB completion
+
+Successful verified writes now open a dedicated completion screen with a large checkmark, the target drive, actual elapsed time, safe-eject instructions and a primary Done action. The competing Create action is hidden. Background completion requests native taskbar flashing until the app returns to the foreground; activating or closing its owned USB dialog also stops the owner's alert. No focus stealing, polling or Windows preference changes. Existing completed USBs do not need rebuilding for this interface change.
+
+The candidate also removes the rejected zero LogonCount and unused username from the disabled AutoLogon branch. A targeted private-media repair replaces recognised WinPE and Windows Setup artwork while retaining the original source tools and configuration. The physical Kingston rewrite passed all 1,117 file hashes plus 66 boot-copy checks on 8 November. Fresh spare-PC account/setup acceptance remains pending; this is not a new full-release certification.
+# Pending USB preparation performance correction
+
+USB-only builds use the selected drive's capacity when deciding whether to recompress Windows. Larger drives can retain the already accepted image compression; saved ISOs retain the conservative16GB target. No payload or preservation/file-integrity check is removed. A verified completed-media checkpoint can reopen the current26H2 build without repeating servicing. This does not certify a new physical USB write or installation.

@@ -8,6 +8,23 @@ namespace TechLoungeOS;
 // Cumulative and explicitly reviewed enablement transactions share strict preservation gates.
 public static class WindowsImageUpdates
 {
+    // This is an in-memory handoff for one unchanged private mount, never a
+    // cached report read from disk. It can replace only one adjacent pre-scan.
+    public sealed class VerifiedHealthScan
+    {
+        private readonly string mount,output;
+        private int used;
+        internal VerifiedHealthScan(string mount,string output)
+        {
+            RequireHealthy(output);this.mount=Path.GetFullPath(mount);this.output=output;
+        }
+        internal string Take(string image)
+        {
+            if(!mount.Equals(Path.GetFullPath(image),StringComparison.OrdinalIgnoreCase)||Interlocked.Exchange(ref used,1)!=0)
+                throw new IOException("The update health scan does not belong to this unchanged image transaction.");
+            return output;
+        }
+    }
     public sealed record Payload(string File, long Bytes, string Sha256);
     public sealed record Enablement(string RuleId,string BaselineVersion);
     public sealed record Plan(int Schema, string SourceVersion, string TargetVersion, Payload[] Packages,Enablement? Feature=null);
@@ -86,7 +103,7 @@ public static class WindowsImageUpdates
 
     public static async Task<Version> Apply(ICommandRunner run, string mount, string workspace,
         string folder, Plan plan, Version importedVersion, Action<string> log, CancellationToken ct,
-        Func<string, IReadOnlyDictionary<string, string>>? serviceReader = null, Func<string, Version>? versionReader = null,Func<string,string>? editionReader=null,Func<string,string?>? releaseReader=null)
+        Func<string, IReadOnlyDictionary<string, string>>? serviceReader = null, Func<string, Version>? versionReader = null,Func<string,string>? editionReader=null,Func<string,string?>? releaseReader=null,Action<VerifiedHealthScan>? verifiedHealth=null)
     {
         ValidatePlan(plan);
         var source = ParseVersion(plan.SourceVersion);
@@ -187,7 +204,8 @@ public static class WindowsImageUpdates
             File.WriteAllText(Path.Combine(root,"preservation-differences.json"),JsonSerializer.Serialize(
                 WindowsUpdatePreservation.Differences(beforeApps,afterApps,beforeFeatures,afterFeatures,beforeConfig,afterConfig,beforePayloads,afterPayloads),
                 new JsonSerializerOptions{WriteIndented=true}));
-            RequireHealthy(await run.Dism("/Image:" + mount, "/Cleanup-Image", "/ScanHealth"));
+            var healthAfter=await run.Dism("/Image:" + mount, "/Cleanup-Image", "/ScanHealth");
+            RequireHealthy(healthAfter);
             SourcePreservation.VerifyComponents(beforeApps, afterApps, beforeFeatures,WindowsUpdateMigrations.ExistingFeatures(migration,beforeFeatures,afterFeatures), []);
             WindowsUpdateMigrations.VerifyConfiguration(migration,beforeConfig,afterConfig);
             WindowsUpdatePreservation.Verify(mount,beforePayloads,migration);
@@ -195,6 +213,7 @@ public static class WindowsImageUpdates
             ct.ThrowIfCancellationRequested();
             Report(true, null);
             log("Windows version and source-preservation checks passed, with only reviewed internal migrations permitted. Recovery and installation acceptance are still required.");
+            verifiedHealth?.Invoke(new VerifiedHealthScan(mount,healthAfter));
             return actual;
         }
         catch (Exception error)

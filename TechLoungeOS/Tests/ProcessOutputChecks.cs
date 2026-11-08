@@ -41,5 +41,11 @@ internal static class ProcessOutputChecks
             failure.Message.Split(expected, StringSplitOptions.None).Length == 3,
             "failed WinGet retains readable Unicode from both output streams");
         check(nativeOutput == "Native \u00e9", "other native commands retain their parent-code-page decoder");
+        check(logs.Count(line=>line.StartsWith("Command timing:"))==3&&logs.Any(line=>line.EndsWith("exit 7.")),"Command durations and failed exit codes are recorded without changing returned tool output");
+        try{await new ProcessRunner(_=>{}).Run(native,["oem","device-lost"]);throw new Exception("Missing native failure");}
+        catch(NativeCommandException error)
+        {
+            check(error.ExitCode==433 && error.Message.StartsWith("Windows lost access to a required drive.") && error.Message.Contains("failed (433)") && error.Message.Contains("Native"),"A disconnected drive keeps its native error code and diagnostics with a clear first-line explanation");
+        }
     }
 }

@@ -140,6 +140,7 @@ namespace TechLoungeOS.FirstLogin
             }
             File.WriteAllText(Path.Combine(root,"progress-checks.txt"),"Packaged Sora faces (Regular and SemiBold), off-screen layout/render and atomic progress updates passed. No installer or live progress window started.");
             CheckProgressInteraction(root);
+            CheckRestartCompletion(root);
             File.WriteAllText(Path.Combine(root,"checks.txt"),"Hidden console, stdout/stderr, exit code, Unicode/quoting, duplicate launch, bounded wallpaper refresh, missing runtime and app-scoped environment passed.");return 0;
         }
 
@@ -181,6 +182,35 @@ namespace TechLoungeOS.FirstLogin
                 System.Windows.Forms.Application.DoEvents();System.Threading.Thread.Sleep(10);
             }
             System.Windows.Forms.Application.DoEvents();
+        }
+
+        private static void CheckRestartCompletion(string root)
+        {
+            var folder=Path.Combine(root,"restart-completion");Directory.CreateDirectory(folder);
+            File.WriteAllText(Path.Combine(folder,"progress.json"),"{\"phase\":\"restart-needed\",\"message\":\"A normal Windows restart is required.\"}");
+            using(var progress=new SetupProgress(folder,delegate{return 0;}))
+            {
+                progress.StartPosition=System.Windows.Forms.FormStartPosition.Manual;
+                progress.Location=new System.Drawing.Point(-20000,-20000);progress.Opacity=0;progress.ShowInTaskbar=false;
+                progress.Show();
+                PumpUntil(delegate{return FindControl(progress,"Later")!=null;});
+                var restart=FindControl(progress,"Restart now") as System.Windows.Forms.Button;
+                var later=FindControl(progress,"Later") as System.Windows.Forms.Button;
+                if(restart==null||!restart.Visible||!restart.Enabled||later==null)throw new Exception("Completed setup did not expose Restart now and Later.");
+                progress.ClientSize=new System.Drawing.Size(460,410);progress.PerformLayout();System.Windows.Forms.Application.DoEvents();
+                foreach(var action in new[]{restart,later,FindControl(progress,"View activity") as System.Windows.Forms.Button}){
+                    if(action==null)throw new Exception("A completion action is missing.");
+                    var bounds=progress.RectangleToClient(action.RectangleToScreen(action.ClientRectangle));
+                    if(!progress.ClientRectangle.Contains(bounds)||!action.Parent.ClientRectangle.Contains(action.Bounds))throw new Exception("A completion action is clipped at the minimum window size.");
+                }
+                // The former completion timer dismissed this window after eight seconds.
+                var waiting=System.Diagnostics.Stopwatch.StartNew();
+                while(waiting.Elapsed.TotalSeconds<9){System.Windows.Forms.Application.DoEvents();System.Threading.Thread.Sleep(20);}
+                if(progress.IsDisposed||!progress.Visible)throw new Exception("Restart completion dismissed itself without user input.");
+                later.PerformClick();
+                if(!progress.IsDisposed)throw new Exception("Later did not dismiss completed setup.");
+            }
+            File.WriteAllText(Path.Combine(root,"restart-completion-checks.txt"),"Restart now and Later remained available past the former eight-second timeout and all three actions fit at 460x410; Later closed the window. No restart command was executed.");
         }
 
         private static void CheckProgressInteraction(string root)

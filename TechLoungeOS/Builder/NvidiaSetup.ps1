@@ -34,7 +34,7 @@ function Get-NvidiaRelease([string]$Name) {
   if ($productsMatched.Count -ne 1) { throw "No unambiguous NVIDIA catalogue match for $Name. Install its supported OEM/NVIDIA driver manually; no family was guessed." }
   $uri = 'https://gfwsl.geforce.com/services_toolkit/services/com/nvidia/services/AjaxDriverService.php?func=DriverManualLookup&pfid=' + $productsMatched[0] + '&osID=135&languageCode=1033&isWHQL=1&dch=1&upCRD=0&numberOfResults=10'
   $data = Invoke-RestMethod -Uri $uri -TimeoutSec 45
-  $releases = @($data.IDS | ForEach-Object { $_.downloadInfo } | Where-Object { $_.IsWHQL -eq '1' -and $_.Version -match '^\d{3}\.\d{2}$' -and $_.DownloadURL })
+  $releases = @($data.IDS | ForEach-Object { $_.downloadInfo } | Where-Object { $_.Success -eq '1' -and $_.IsWHQL -eq '1' -and $_.IsBeta -eq '0' -and $_.Version -match '^\d{3}\.\d{2}$' -and $_.DownloadURL })
   if (!$releases.Count) { throw "No compatible Windows 11 WHQL driver is currently offered for $Name." }
   $release = $releases | Sort-Object { [version]$_.Version } -Descending | Select-Object -First 1
   Assert-NvidiaUrl $release.DownloadURL
@@ -58,6 +58,52 @@ function Invoke-NvidiaProcess([string]$Path, [string]$Arguments) {
 function Assert-NvidiaSpace([string]$State) {
   $drive=New-Object IO.DriveInfo([IO.Path]::GetPathRoot($State))
   if($drive.AvailableFreeSpace -lt 8GB){throw 'NVIDIA driver download/extraction needs at least 8 GB free on the installed Windows drive.'}
+}
+function Get-NvidiaAppRelease {
+  $page=(Invoke-WebRequest -UseBasicParsing -TimeoutSec 45 -Uri 'https://www.nvidia.com/en-us/software/nvidia-app/').Content
+  if($page.Length -gt 4MB){throw 'The NVIDIA App download page changed unexpectedly.'}
+  $pattern='https://(?:us|international)\.download\.nvidia\.com/nvapp/client/(?<version>\d+\.\d+\.\d+\.\d+)/x64/NVIDIA_app_v\k<version>_x64\.exe'
+  $links=@([regex]::Matches($page,$pattern)|ForEach-Object Value|Select-Object -Unique)
+  if($links.Count -ne 1){throw 'NVIDIA has not supplied one unambiguous stable x64 App download. No installer was guessed.'}
+  Assert-NvidiaUrl $links[0]
+  if($links[0] -notmatch '/client/(?<version>\d+\.\d+\.\d+\.\d+)/'){throw 'The NVIDIA App version could not be verified.'}
+  [pscustomobject]@{Version=$Matches.version;DownloadURL=$links[0]}
+}
+function Get-NvidiaAppPath {
+  Join-Path ([Environment]::GetFolderPath('ProgramFiles')) 'NVIDIA Corporation\NVIDIA App\CEF\NVIDIA App.exe'
+}
+function Get-NvidiaAppVersion {
+  $path=Get-NvidiaAppPath
+  if(!(Test-Path -LiteralPath $path)){return $null}
+  Assert-NvidiaSignature $path
+  $version=[Diagnostics.FileVersionInfo]::GetVersionInfo($path).ProductVersion
+  if($version -notmatch '^(\d+\.\d+\.\d+\.\d+)(?:\s|$)'){throw 'The installed NVIDIA App has no verifiable product version.'}
+  [version]$Matches[1]
+}
+function Ensure-NvidiaApp([string]$State) {
+  Set-Content "$State\status.txt" 'Checking the latest NVIDIA App from NVIDIA. Driver/profile setup is not complete yet.'
+  $release=Get-NvidiaAppRelease
+  $installed=Get-NvidiaAppVersion
+  if($installed -and $installed -ge [version]$release.Version){
+    [pscustomobject]@{InstalledVersion=$installed.ToString();RequiredVersion=$release.Version;Result='Verified existing signed App'}|ConvertTo-Json|Set-Content "$State\app-receipt.json"
+    return
+  }
+  Assert-NvidiaSpace $State
+  $download=Join-Path $State 'nvidia-app.exe'
+  Set-Content "$State\status.txt" ('Downloading NVIDIA App '+$release.Version+'. Keep this PC on and connected.')
+  Assert-NvidiaUrl $release.DownloadURL
+  Invoke-WebRequest -Uri $release.DownloadURL -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 1800 -OutFile $download
+  Assert-NvidiaSignature $download
+  Set-Content "$State\status.txt" ('Installing NVIDIA App '+$release.Version+' quietly. No profile has been marked complete.')
+  $code=Invoke-NvidiaProcess $download '-s -noreboot'
+  if($code -notin @(0,1)){throw "NVIDIA App installation failed ($code). The graphics profile has not been applied."}
+  if($code -eq 1){
+    Set-Content "$State\restart-boot.txt" (Get-CimInstance Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().ToString('o')
+    throw 'NVIDIA App requires a normal Windows restart. Its installation and the TechLounge profile will be verified afterwards.'
+  }
+  $actual=Get-NvidiaAppVersion
+  if(!$actual -or $actual -lt [version]$release.Version){throw 'The NVIDIA App installer returned, but the expected signed application/version is not installed. Setup remains incomplete.'}
+  [pscustomobject]@{Version=$release.Version;InstalledVersion=$actual.ToString();Url=$release.DownloadURL;Sha256=(Get-FileHash $download).Hash;ExitCode=$code}|ConvertTo-Json|Set-Content "$State\app-receipt.json"
 }
 function Export-NvidiaProfile([string]$Payload, [string]$Destination) {
   $before=@(Get-ChildItem -LiteralPath $Payload -Filter 'CustomProfiles_*.nip' | ForEach-Object FullName)
@@ -121,7 +167,12 @@ function Invoke-NvidiaProvisioning([string]$Payload, [string]$State) {
     throw 'The driver installation completed. Restart Windows normally to activate it, then NVIDIA profile setup will retry.'
   }
   $ready = @(Get-CimInstance Win32_PnPSignedDriver | Where-Object { $_.DeviceClass -eq 'DISPLAY' -and $_.DeviceID -match '^PCI\\VEN_10DE&' -and $_.IsSigned -and $_.DriverProviderName -match '^NVIDIA' })
-  if ($ready.Count -lt $devices.Count) { throw 'A signed NVIDIA display driver is not ready for every detected NVIDIA adapter.' }
+  foreach($device in $devices) {
+    $matched=@($ready|Where-Object {$_.DeviceID -ieq $device.PNPDeviceID -and (Get-NvidiaVersion $_.DriverVersion) -and (Get-NvidiaVersion $_.DriverVersion) -ge [version]$release.Version})
+    if($matched.Count -ne 1){throw 'A current signed NVIDIA display driver is not ready for every detected NVIDIA adapter.'}
+  }
+  Ensure-NvidiaApp $State
+  Set-Content "$State\status.txt" 'NVIDIA driver and App verified. Applying and checking the TechLounge graphics profile.'
   $tool = Join-Path $Payload 'nvidiaProfileInspector.exe'
   $profile = Join-Path $Payload 'TechLoungeProfile.nip'
   if (!(Test-Path "$State\before.nip")) {
@@ -138,7 +189,7 @@ function Invoke-NvidiaProvisioning([string]$Payload, [string]$State) {
     $found=@($global[0].Settings.ProfileSetting | Where-Object { $_.SettingID -eq $setting.SettingID -and $_.SettingValue -eq $setting.SettingValue -and $_.ValueType -eq $setting.ValueType })
     if($found.Count -ne 1){throw ('NVIDIA setting did not read back: '+$setting.SettingID)}
   }
-  Set-Content "$State\status.txt" ('TechLounge NVIDIA profile imported after compatible driver check. Driver catalogue version: ' + $release.Version)
+  Set-Content "$State\status.txt" ('NVIDIA driver, NVIDIA App and TechLounge graphics profile verified. Driver catalogue version: ' + $release.Version)
   # Only our own cache directories may be removed; the original ISO is unrelated.
   if (Test-Path "$State\driver.exe") { Remove-Item -LiteralPath "$State\driver.exe" -Force }
   if (Test-Path "$State\driver-files") { Remove-Item -LiteralPath "$State\driver-files" -Recurse -Force }
