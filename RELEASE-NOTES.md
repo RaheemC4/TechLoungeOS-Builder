@@ -1,6 +1,6 @@
 ## 0.1.46 - faster preparation without dropping checks
 
-The showcase was revised separately: 72 seconds at 1080p/60 fps, action-led motion, all fifteen wallpaper variants, an illustrated gaming-setup sequence and synchronised sound effects. Video-capture checks wait for the selected wallpaper to render. This media revision does not change the released app package or existing USB media.
+The showcase was revised separately: 84 seconds at 1080p/60 fps, one consistent product frame, measured cursor targets, an OBS Studio search-and-add example, all fifteen wallpaper variants, gaming/network/NVIDIA/boot feature animation, native USB and WinPE controls, and a dedicated icon-and-name ending. Music now spans the complete video with 32 synchronised sound cues. The desktop is a labelled visualisation, not installation evidence. This media revision does not change the released app package, update manifest or existing USB media.
 
 - Prepare up to two independent prerequisite downloads together, with lower concurrency on low-memory PCs; keep Windows servicing and USB writing serial.
 - Reuse verified Office data from a completed workspace in the same session while checking Microsoft's Current version again. Damaged caches fall back to a fresh download.

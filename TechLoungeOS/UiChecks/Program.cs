@@ -14,6 +14,10 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if(args is ["--integrated-video-frames",var integratedFolder,var integratedCatalogue,var integratedImport,var searchSnapshot])
+        {
+            var integratedApp=new App(false);integratedApp.InitializeComponent();ReleaseVideoFrames.Run(integratedFolder,integratedCatalogue,integratedImport,true,searchSnapshot);integratedApp.Shutdown();return;
+        }
         if(args is ["--premium-video-frames",var premiumFolder,var premiumCatalogue,var premiumImport])
         {
             var premiumApp=new App(false);premiumApp.InitializeComponent();ReleaseVideoFrames.Run(premiumFolder,premiumCatalogue,premiumImport,true);premiumApp.Shutdown();return;
