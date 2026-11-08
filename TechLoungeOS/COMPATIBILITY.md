@@ -675,7 +675,7 @@ The current candidate corrects first-login Recommended settings/readiness and ad
 
 The confirmed Ghost boot.wim startup reference %systemroot%\system32\winre.jpg is now recognised alongside winpe.jpg and setup.bmp. This changes only the private WinPE picture; the recovery WIM and registry references remain outside that artwork change. Unknown custom references still stop preparation.
 
-## 0.1.46 performance candidate
+## 0.1.46 performance changes
 Independent prerequisite downloads overlap at most two jobs, with a low-memory backoff; image mutations and physical drive operations stay serial. Same-session Office reuse requires an intact Builder receipt, is excluded on the selected USB volume, and still refreshes signed ODT/current version. Full checksum readback and preservation gates remain. The healthy-scan handoff is single-use, in-memory and restricted to the same successful update transaction/mount; no persistent health cache is trusted. More compressor threads were rejected after the native comparison showed no gain.
 
 The current completed26H2 USB is unchanged. This candidate's1,078 regressions and native inert-file/interface checks do not establish a newly measured full build, physical GPU acceptance or in-place repair/reinstall support through setup.exe. That separate Windows-hosted installation route remains pending; booting the completed USB remains the existing route.
