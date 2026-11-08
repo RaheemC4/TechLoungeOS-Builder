@@ -14,6 +14,10 @@ internal static class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        if(args is ["--premium-video-frames",var premiumFolder,var premiumCatalogue,var premiumImport])
+        {
+            var premiumApp=new App(false);premiumApp.InitializeComponent();ReleaseVideoFrames.Run(premiumFolder,premiumCatalogue,premiumImport,true);premiumApp.Shutdown();return;
+        }
         if(args is ["--usb-activity-checks" or "--usb-activity-video",var activityFolder])
         {
             var activityApp=new App(false);activityApp.InitializeComponent();UsbActivityChecks.Run(activityFolder,args[0]=="--usb-activity-video");activityApp.Shutdown();return;
