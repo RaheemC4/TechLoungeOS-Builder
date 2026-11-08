@@ -2,7 +2,7 @@
 
 Build a Windows 11 installer with your apps, desktop and setup preferences already chosen.
 
-[![Watch the 93-second showcase](docs/preview.png)](docs/preview.mp4)
+[![Watch the 93-second 4K showcase](docs/preview.png)](docs/preview.mp4)
 
 - Download Windows 11 from Microsoft or import an ISO, then choose an edition and components.
 - Search for apps or select the recommended set, including Discord, Stremio, Proton VPN and HWiNFO64.
