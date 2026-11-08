@@ -2,7 +2,7 @@
 
 Build a Windows 11 installer with your apps, desktop and setup preferences already chosen.
 
-[![Watch the 84-second showcase](docs/preview.png)](docs/preview.mp4)
+[![Watch the 93-second showcase](docs/preview.png)](docs/preview.mp4)
 
 - Download Windows 11 from Microsoft or import an ISO, then choose an edition and components.
 - Search for apps or select the recommended set, including Discord, Stremio, Proton VPN and HWiNFO64.
@@ -23,6 +23,6 @@ Office uses the normal Microsoft deployment tools and your own account or licenc
 
 [Download the Windows x64 app](https://github.com/RaheemC4/TechLoungeOS-Builder/releases/latest). Extract the complete ZIP and open TechLoungeOS.Builder.exe.
 
-Ghost and standard-image servicing/install checks passed for their recorded media, including selected apps, Office, TechLoungeTweaks and ordinary recovery. The current Ghost media passed full file verification and 16 GB virtual USB writing, BIOS boot and UEFI Secure Boot with TPM 2.0. Physical hardware, arbitrary modified images and unknown Windows upgrade routes are not certified. See [test results](TechLoungeOS/TEST-RESULTS.md) and [compatibility](TechLoungeOS/COMPATIBILITY.md). The video follows the Builder through app search and selection, all fifteen wallpapers, gaming/system features, USB progress and WinPE/account setup. It finishes with a labelled desktop visualisation and product end card. [Video credits and evidence](docs/VIDEO-CREDITS.md).
+Ghost and standard-image servicing/install checks passed for their recorded media, including selected apps, Office, TechLoungeTweaks and ordinary recovery. The current Ghost media passed full file verification and 16 GB virtual USB writing, BIOS boot and UEFI Secure Boot with TPM 2.0. Physical hardware, arbitrary modified images and unknown Windows upgrade routes are not certified. See [test results](TechLoungeOS/TEST-RESULTS.md) and [compatibility](TechLoungeOS/COMPATIBILITY.md). The video follows the Builder through app search and selection, all fifteen wallpapers, gaming/system features, USB progress and WinPE/account setup. It opens with the product identity, shows all selected apps on a labelled desktop visualisation, follows TechLoungeTweaks into System → Resources, and finishes with the product end card. [Video credits and evidence](docs/VIDEO-CREDITS.md).
 
 [Build and technical documentation](TechLoungeOS/README.md)

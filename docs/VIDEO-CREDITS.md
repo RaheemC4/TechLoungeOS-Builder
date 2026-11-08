@@ -1,10 +1,10 @@
 # Video credits and evidence
 
-The 84-second showcase is 1920 × 1080 at 60 fps. One persistent product frame keeps native pages, search results and USB windows aligned. It finishes with a labelled desktop visualisation, then the approved icon and product name.
+The 93-second showcase is 1920 × 1080 at 60 fps. One persistent product frame keeps native pages, search results and USB windows aligned. The approved icon and product name identify the app on the first frame. The result shows all ten selected apps plus TechLoungeTweaks on a labelled desktop visualisation. A double-click opens the actual Tweaks Home interface, System expands using captured native animation frames, Resources is selected, and its existing Activate Windows option is hovered without running it. Tweaks closes back to the desktop before the icon-and-name ending.
 
-Music: **Happy Beats & Business Moves Vol.10**, Sascha Ende, [ende.app](https://ende.app), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The original 60-second track is joined to a second copy with a three-second crossfade, level controlled and trimmed to 84 seconds, with the final fade at the end card.
+Music: **Happy Beats & Business Moves Vol.10**, Sascha Ende, [ende.app](https://ende.app), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). The original 60-second track is joined to a second copy with a three-second crossfade, level controlled and trimmed to 93 seconds, with the final fade at the end card.
 
-Sound effects: [Kenney](https://kenney.nl/), CC0. The click is byte-identical to the earlier approved Shiftd showcase asset (SHA256 `2FA929138BC3A0F432696588F66EAC94B8F6D463905EC8808C6461CE4B054292`). The edit uses 32 click, selection, switch, slide and soft-impact cues. Typeface: Sora, SIL Open Font License 1.1; licence in `TechLoungeOS/FirstLogin/Fonts/OFL.txt`.
+Sound effects: [Kenney](https://kenney.nl/), CC0. The click is byte-identical to the earlier approved Shiftd showcase asset (SHA256 `2FA929138BC3A0F432696588F66EAC94B8F6D463905EC8808C6461CE4B054292`). The edit uses 38 click, selection, switch, slide and soft-impact cues. Typeface: Sora, SIL Open Font License 1.1; licence in `TechLoungeOS/FirstLogin/Fonts/OFL.txt`.
 
 ## What the footage demonstrates
 
@@ -17,10 +17,10 @@ Sound effects: [Kenney](https://kenney.nl/), CC0. The click is byte-identical to
 
 ## Checks on the delivered export
 
-The native capture build passed. Browser checks sampled 672 timeline positions and verified all 16 pointer targets, one primary page, headings inside the frame and hidden elements before their entrance. Hyperframes reported no runtime, layout or contrast errors; its motion checker was disabled. One media lint warning remains for intentional reuse of Chrome/Discord artwork as desktop shortcuts and taskbar icons.
+The native capture build passed. Browser checks covered all 5,580 timeline frames and verified all 22 pointer targets, one primary page, headings and shortcut labels inside their bounds, first-frame identity and hidden elements before their entrance. A second motion check used 300 samples and verified entrance order and framing. Hyperframes reported no runtime, layout, motion or contrast errors. Three media lint warnings remain for intentional artwork reuse across the two desktop shots, taskbar and identity cards. The first check used an ambiguous selector; it was corrected and the final motion check passed.
 
-The encoded video fully decoded: 5,040 frames and 84-second stereo audio. All 420 encoded WinPE frames were checked for the exposed bright startup screen. Exported journey, feature, transition and ending contact sheets were visually reviewed. Audio measurements found no silence gaps of 0.25 seconds or longer at −60 dBFS, including after minute one; mean −26.4 dBFS, peak −8.5 dBFS. Audio was measured, not audibly auditioned.
+The encoded video fully decoded: 5,580 frames and 93-second stereo audio. All 420 encoded WinPE frames were checked for the exposed bright startup screen. Exported journey, feature, transition and ending contact sheets were visually reviewed. Audio measurements found no silence gaps of 0.25 seconds or longer at −60 dBFS, including after minute one; mean −26.4 dBFS, peak −8.1 dBFS. All 38 encoded cue windows matched the premix with correlation at least 0.996394 and zero measured timing offset. Audio was measured, not audibly auditioned.
 
-Video SHA256: `D066D89A72A912FDAFD9C4EA8A9430501532D1360FF62CE62CFBED85D7C25678`.
+Video SHA256: `653593F3195C4B8348CA8BD8EE1AFF0844CC5A5039741B6BE620D0573D919521`.
 
 No original ISO, completed USB, application package or update manifest was changed for this video revision.
